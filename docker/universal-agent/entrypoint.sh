@@ -1,22 +1,20 @@
 #!/bin/bash
+export GIT_CONFIG_GLOBAL=/dev/null
+export GIT_CONFIG_SYSTEM=/dev/null
+export GIT_TERMINAL_PROMPT=0
+unset GH_TOKEN GITHUB_TOKEN GIT_AUTHOR_NAME GIT_AUTHOR_EMAIL GIT_COMMITTER_NAME GIT_COMMITTER_EMAIL
 
-# --- Git Identity Setup ---
-# Используем путь в примонтированной папке .config, чтобы настройки сохранялись
-export GIT_CONFIG_GLOBAL="/home/agent/.config/.gitconfig"
+# Git identity via environment variables (no global config writes)
+export GIT_AUTHOR_NAME="hydr4-agent"
+export GIT_AUTHOR_EMAIL="hydr4-agent@noreply.local"
+export GIT_COMMITTER_NAME="hydr4-agent"
+export GIT_COMMITTER_EMAIL="hydr4-agent@noreply.local"
 
-if [ ! -f "$GIT_CONFIG_GLOBAL" ]; then
-    echo "⚙️  Initializing default Git identity..."
-    git config --global user.name "Hydra AI Agent"
-    # Генерируем уникальный email на основе hostname контейнера, чтобы не хардкодить PII
-    git config --global user.email "agent@$(hostname).local"
-fi
-# --------------------------
-
-# --- GitHub App Token Setup ---
-if [ -s "/home/agent/.config/github-app/current-token" ]; then
-    echo "🔑 Configuring GitHub App credential helper..."
+# --- GitHub PAT Token Setup ---
+if [ -s "/home/agent/.config/pat/current-token" ]; then
+    echo "🔑 Configuring GitHub PAT credential helper..."
     git config --global credential.helper "/home/agent/.local/bin/git-credential-mount.sh"
-    echo "✅ GitHub App credential helper configured"
+    echo "✅ GitHub PAT credential helper configured"
 fi
 
 # ------------------------------
