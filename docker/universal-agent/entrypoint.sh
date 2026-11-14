@@ -21,17 +21,18 @@ fi
 
 # ------------------------------
 
-if [ "$AGENT_TYPE" = "opencode" ]; then
-    echo "🚀 Запуск OpenCode Web Server..."
-    exec opencode serve --hostname 0.0.0.0 --port 4096
-    
-elif [ "$AGENT_TYPE" = "dsh" ]; then
-    echo "🚀 Запуск DeepSeek Harness..."
-    # Запускаем DSH (порт 3080)
-    exec dsh web --port 3080 --host 0.0.0.0
-    
-else
-    echo "❌ Неизвестный AGENT_TYPE: $AGENT_TYPE. Доступны: opencode, dsh."
-    exec bash
+if [ -z "$AGENT_BACKEND" ]; then
+    echo "❌ AGENT_BACKEND is not set. Available: opencode, dsh."
+    exit 1
 fi
+
+BACKEND_SCRIPT="/agent/backends/${AGENT_BACKEND}.sh"
+
+if [ ! -f "$BACKEND_SCRIPT" ]; then
+    echo "❌ Backend script not found: $BACKEND_SCRIPT"
+    exit 1
+fi
+
+echo "🔄 Delegating to backend: $AGENT_BACKEND"
+exec "$BACKEND_SCRIPT"
 
