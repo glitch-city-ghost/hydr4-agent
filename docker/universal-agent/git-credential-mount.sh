@@ -6,3 +6,4 @@ if [ "$1" = "get" ]; then
         echo "password=$TOKEN"
     fi
 fi
+
