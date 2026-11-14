@@ -11,44 +11,10 @@ if [ -f .env ]; then
     set +a
 fi
 
-PID_FILE="/tmp/hydr4-token-refresher.pid"
-LOG_FILE="/tmp/hydr4-token-refresher.log"
-
 case "$1" in
     start)
         echo -e "${YELLOW}Запуск Hydra (Агрегатор + Агент)...${NC}"
         docker compose --profile opencode up -d
-        
-        # Запуск фонового обновления токена
-        if [ -f "$HOME/hydr4-data/secrets/github-app/private-key.pem" ]; then
-            if [ -f "$PID_FILE" ] && kill -0 "$(cat $PID_FILE)" 2>/dev/null; then
-                echo -e "${GREEN}Token refresher уже запущен (PID: $(cat $PID_FILE))${NC}"
-            else
-                echo -e "${YELLOW}Запуск фонового обновления GitHub токена...${NC}"
-                # Сгенерировать токен сразу (атомарная запись)
-		mkdir -p "$HOME/hydr4-data/secrets/github-app/token"
-		chmod 700 "$HOME/hydr4-data/secrets/github-app/token"
-		TMP_TOKEN=$(mktemp)
-		./scripts/get-github-token.sh "$GITHUB_APP_ID" "$GITHUB_INSTALLATION_ID" \
-    			"$HOME/hydr4-data/secrets/github-app/private-key.pem" > "$TMP_TOKEN"
-		chmod 600 "$TMP_TOKEN"
-		mv "$TMP_TOKEN" "$HOME/hydr4-data/secrets/github-app/token/current-token"
-                
-                # Запустить фоновый процесс
-                nohup bash -c "
-                    while true; do
-                        sleep 3000
-                        cd $PWD
-                        TMP_TOKEN=\$(mktemp)
-                        ./scripts/get-github-token.sh $GITHUB_APP_ID $GITHUB_INSTALLATION_ID $HOME/hydr4-data/secrets/github-app/private-key.pem > \"\$TMP_TOKEN\"
-                        chmod 600 \"\$TMP_TOKEN\"
-			mv \"\$TMP_TOKEN\" $HOME/hydr4-data/secrets/github-app/token/current-token
-                    done
-                " > "$LOG_FILE" 2>&1 &
-                echo $! > "$PID_FILE"
-                echo -e "${GREEN}Token refresher started (PID: $!)${NC}"
-            fi
-        fi
         
         echo -e "${GREEN}Готово!${NC}"
         echo -e "• Agent UI:      http://agent.localhost"
@@ -57,26 +23,7 @@ case "$1" in
         ;;
     stop)
         echo -e "${YELLOW}Остановка Hydra...${NC}"
-        # Останавливаем refresher
-        if [ -f "$PID_FILE" ]; then
-            PID=$(cat "$PID_FILE")
-            if kill -0 "$PID" 2>/dev/null; then
-                kill "$PID"
-                echo -e "${YELLOW}Token refresher stopped (PID: $PID)${NC}"
-            fi
-            rm -f "$PID_FILE"
-        fi
         docker compose --profile opencode down
-        ;;
-    token)
-        echo -e "${YELLOW}Ручное обновление GitHub токена...${NC}"
-	mkdir -p "$HOME/hydr4-data/secrets/github-app/token"
-	TMP_TOKEN=$(mktemp)
-	./scripts/get-github-token.sh "$GITHUB_APP_ID" "$GITHUB_INSTALLATION_ID" \
-    		"$HOME/hydr4-data/secrets/github-app/private-key.pem" > "$TMP_TOKEN"
-	chmod 600 "$TMP_TOKEN"
-	mv "$TMP_TOKEN" "$HOME/hydr4-data/secrets/github-app/token/current-token"
-        echo -e "${GREEN}Токен обновлен!${NC}"
         ;;
     web)
         echo -e "Открой в браузере: ${GREEN}http://localhost:4096${NC}"
@@ -86,7 +33,7 @@ case "$1" in
         docker compose exec agent bash
         ;;
     *)
-        echo "Использование: ./hydra {start|stop|token|web|cli}"
+        echo "Использование: ./hydra {start|stop|web|cli}"
         exit 1
         ;;
 esac
