@@ -17,8 +17,8 @@ Windows host
 
 ## Components
 - **l3rn4-nix**: OS, Docker, mihomo, Traefik. Unaware of hydr4 internals.
-- **aggregator**: OpenAI-compatible proxy, provider failover. Must adhere to `contracts/model-gateway.md`.
-- **agent**: Interchangeable container. Must adhere to `contracts/agent-seam.md`.
+- **aggregator**: OpenAI-compatible proxy, provider failover. Must adhere to `docs/contracts/model-gateway.md`.
+- **agent**: Interchangeable container. Must adhere to `docs/contracts/agent-seam.md`.
 
 ## Contracts
-All interfaces between these components are strictly defined in the `contracts/` directory.
+All interfaces between these components are strictly defined in the `docs/contracts/` directory.
