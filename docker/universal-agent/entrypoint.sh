@@ -13,7 +13,9 @@ export GIT_COMMITTER_EMAIL="hydr4-agent@noreply.local"
 # --- GitHub PAT Token Setup ---
 if [ -s "/home/agent/.config/pat/current-token" ]; then
     echo "🔑 Configuring GitHub PAT credential helper..."
-    git config --global credential.helper "/home/agent/.local/bin/git-credential-mount.sh"
+    export GIT_CONFIG_COUNT=1
+    export GIT_CONFIG_KEY_0=credential.helper
+    export GIT_CONFIG_VALUE_0="/home/agent/.local/bin/git-credential-mount.sh"
     echo "✅ GitHub PAT credential helper configured"
 fi
 
