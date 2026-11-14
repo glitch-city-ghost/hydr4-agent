@@ -12,13 +12,12 @@ services:
       - ALL
     ports:
       - "127.0.0.1:4096:4096"
-      - "127.0.0.1:3080:3080"
     environment:
-      - AGENT_TYPE=${AGENT_TYPE:-opencode}
+      - AGENT_BACKEND=${AGENT_BACKEND:-opencode}
       - OPENAI_BASE_URL=http://aggregator:3001/v1
       - HYDRA_API_KEY=${FREELMAPI_UNIFIED_KEY}
       - OPENCODE_PASSWORD=${OPENCODE_PASSWORD}
-      - OPENCODE_CONFIG=/configs/opencode.json
+      - OPENCODE_CONFIG=/configs/backends/opencode/config.json
       - GIT_CONFIG_GLOBAL=/home/agent/.config/.gitconfig
     volumes:
       - ../../workspace:/workspace

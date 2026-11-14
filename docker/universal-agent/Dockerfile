@@ -50,4 +50,7 @@ RUN chmod +x /home/agent/.local/bin/git-credential-mount.sh
 COPY --chown=agent:agent entrypoint.sh /home/agent/entrypoint.sh
 RUN chmod +x /home/agent/entrypoint.sh
 
+COPY --chown=agent:agent backends /agent/backends
+RUN chmod +x /agent/backends/*.sh
+
 ENTRYPOINT ["/home/agent/entrypoint.sh"]
