@@ -94,42 +94,7 @@ Migrate all persistent storage to explicit **Bind Mounts** located in a centrali
 - **Pros:** Easy backups (just copy the folder), transparent data access, strict separation of code (Git) and state (Disk).
 - **Cons:** Users must manually ensure the directory exists and has the correct UID/GID permissions (`1000:1000`).
 
-### ADR-006: GitHub App for Agent Authentication
-
-**Status:** Accepted.
-
-**Context:**
-Deploy Keys with write access inherently possess administrative privileges and can bypass Branch Protection rules. This allowed the agent to push directly to `main`, violating our security model.
-
-**Decision:**
-We created a dedicated GitHub App (`Hydr4 Agent`) with restricted permissions (`contents: write`, `pull_requests: write`). The App's private key is mounted into the container. At startup, `gh-token` generates a short-lived installation token (valid for 1 hour), which is used for Git operations.
-
-**Consequences:**
-- The agent can push to branches and create Pull Requests.
-- Direct pushes to `main` are blocked by Rulesets, even for the App.
-- The App is added to the Ruleset Bypass list with the `Only for pull requests` mode, ensuring it cannot bypass protection for direct pushes.
-- Secrets (the `.pem` file) remain outside the Git repository in `~/hydr4-data/secrets/github-app/`.
-
-### ADR-007: Token Generation on Host (Refactoring ADR-006)
-
-**Status:** Accepted.
-
-**Context:**
-In ADR-006, we generated the GitHub App token *inside* the container using `gh-token` and `jq`. This violated the separation of concerns — the container should only consume a token, not generate it.
-
-**Decision:**
-Move token generation to the host. The container no longer contains `gh-token` or `jq`. Instead:
-1. A host-side script (`scripts/get-github-token.sh`) uses `openssl`, `curl`, and `jq` to generate a fresh token.
-2. The token is written to `~/hydr4-data/secrets/github-app/current-token`.
-3. Only that file is mounted into the container (read-only).
-4. `entrypoint.sh` simply reads the file and configures Git.
-
-**Consequences:**
-- The container is simpler (no `gh-token` binary).
-- The private key (`private-key.pem`) is no longer visible inside the container.
-- The token must be refreshed manually (`./hydra token`) or via a cron job on the host.
-
-### ADR-008: External Traefik Gateway on l3rn4-nix
+### ADR-006: External Traefik Gateway on l3rn4-nix
 
 **Status:** Accepted.
 

@@ -1,48 +1,30 @@
 # hydr4-agent Roadmap & Deferred Work
 
 Этот файл фиксирует архитектурные улучшения, которые мы осознанно отложили.
-Они не блокируют текущую работу, но должны быть выполнены, когда появится время.
-
----
-
-## ✅ Completed (Archive)
-
-### 1. Migrate Traefik from `hydr4-agent` to `l3rn4-nix`
-**Status:** Done (2026-11-13)
-**Related:** `compose/traefik.yaml` (deleted), ADR-008
-
-**Summary:**
-Traefik был перенесен на уровень хоста (`l3rn4-nix`). Теперь `hydr4-agent` не управляет прокси-сервером. Вместо этого мы объявляем наши сервисы через Docker-лейблы и подключаемся к внешней сети `traefik-net`. 
-На уровне `l3rn4-nix` также настроен безопасный доступ к Docker через `docker-socket-proxy` и добавлены роуты для `mihomo.localhost` и `traefik.localhost`. 
-Документация по сетевой архитектуре теперь ведется в `l3rn4-nix/NETWORK_AUDIT.md`.
-
----
 
 ## 🚀 Upcoming & Deferred Work
 
-*Этот список будет пополняться по мере развития проекта.*
+### 1. Migrate Aggregator to LiteLLM
+- **Status:** In Progress
+- **Context:** FreeLLMAPI handles 429 errors poorly. LiteLLM supports `Retry-After` and fallbacks.
+- **Goal:** Replace FreeLLMAPI image with LiteLLM + Postgres. Update `.env` and contracts accordingly.
 
-### 2. Автоматическая ротация секретов
+### 2. Implement Agent Seam (AGENT_BACKEND)
 - **Status:** Pending
-- **Context:** Сейчас `ENCRYPTION_KEY` и `FREELMAPI_UNIFIED_KEY` меняются вручную (через `.env` и UI).
-- **Goal:** Реализовать процедуру или скрипт для их безопасной ротации без простоя сервисов.
+- **Context:** Currently, OpenCode is baked into the Dockerfile.
+- **Goal:** Follow `contracts/agent-seam.md`. Create `/configs/backends/opencode/` and generic `entrypoint.sh`.
 
-### 3. Харденинг агента: `read_only: true`
+### 3. Harden Agent Filesystem (`read_only: true`)
 - **Status:** Pending
-- **Context:** Root-файловая система контейнера `agent` сейчас доступна для записи. 
-- **Goal:** Добавить `read_only: true` в `compose/agents.yaml` для `agent`, и смонтировать `tmpfs` для тех директорий, куда OpenCode пытается писать (например, `/tmp`), чтобы защитить систему от изменений.
+- **Context:** The container's root FS is currently writable.
+- **Goal:** Add `read_only: true` in `compose/agents.yaml`, mount `tmpfs` for `/tmp`.
 
-### 4. Добавление `dsh` (DeepSeek Harness) как альтернативного агента
+### 4. Add DSH as an Alternative Agent
 - **Status:** Pending
-- **Context:** Наша архитектура позволяет запускать разных агентов через `AGENT_TYPE`. Сейчас используется OpenCode.
-- **Goal:** Проверить работу DSH в нашей песочнице (второй профиль в `compose.yaml`), сравнить его с OpenCode и, если нужно, добавить кастомные инструкции в `entrypoint.sh`.
+- **Context:** Our architecture allows running different agents.
+- **Goal:** Implement `dsh` backend following the agent seam contract.
 
-### 5. Мониторинг и Observability
+### 5. Monitoring and Observability
 - **Status:** Pending
-- **Context:** Сейчас мы видим только логи Docker и дашборд FreeLLMAPI.
-- **Goal:** Развернуть Prometheus + Grafana (или другой стек) для сбора метрик по токенам, задержкам LLM и статусу контейнеров.
-
-### 6. Автоматизация GitHub Token Refresher (Systemd)
-- **Status:** Pending
-- **Context:** Сейчас `hydra` запускает фоновый цикл обновления токена.
-- **Goal:** В идеале перенести это в `systemd` таймер на стороне `l3rn4-nix`, чтобы токен обновлялся даже без запущенного `hydra`.
+- **Context:** We only have Docker logs and the aggregator dashboard.
+- **Goal:** Deploy Prometheus + Grafana for LLM latency and token metrics.
