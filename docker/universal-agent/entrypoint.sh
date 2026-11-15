@@ -12,11 +12,11 @@ if [ ! -f "$GIT_CONFIG_GLOBAL" ]; then
 fi
 # --------------------------
 
-# --- GitHub App Token Setup ---
+# --- GitHub PAT Token Setup ---
 if [ -s "/home/agent/.config/pat/current-token" ]; then
     echo "🔑 Configuring GitHub PAT credential helper..."
     git config --global credential.helper "/home/agent/.local/bin/git-credential-mount.sh"
-    echo "✅ GitHub App credential helper configured"
+    echo "✅ GitHub PAT credential helper configured"
 fi
 
 # ------------------------------

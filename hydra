@@ -19,7 +19,6 @@ case "$1" in
         echo -e "${GREEN}Готово!${NC}"
         echo -e "• Agent UI:      http://agent.localhost"
         echo -e "• Aggregator UI: http://api.localhost"
-        echo -e "• Traefik Dash:  http://localhost:8080"
         ;;
     stop)
         echo -e "${YELLOW}Остановка Hydra...${NC}"
