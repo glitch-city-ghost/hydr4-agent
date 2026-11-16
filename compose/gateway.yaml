@@ -13,9 +13,7 @@ services:
       - HTTP_PROXY=${UPSTREAM_PROXY}
       - HTTPS_PROXY=${UPSTREAM_PROXY}
     volumes:
-      # Data path intentionally kept as "aggregator" for compatibility.
-      # Rename/migrate the volume separately.
-      - ~/hydr4-data/aggregator:/app/server/data
+      - ~/hydr4-data/gateway:/app/server/data
     networks:
       - agent-net
       - traefik-net

@@ -85,7 +85,7 @@ Initially, the project used Docker Named Volumes (`agent-data`, `opencode-data`,
 Migrate all persistent storage to explicit **Bind Mounts** located in a centralized directory outside the Git repository: `~/hydr4-data/`.
 
 **Structure:**
-- `~/hydr4-data/aggregator/` — FreeLLMAPI database (legacy data path; kept for data compatibility).
+- `~/hydr4-data/gateway/` — FreeLLMAPI database.
 - `~/hydr4-data/agent/config/` — Agent configurations (`.config`).
 - `~/hydr4-data/agent/local-share/` — OpenCode chat history and sessions.
 - `~/hydr4-data/secrets/` — (Future) SSH keys and sensitive tokens.
