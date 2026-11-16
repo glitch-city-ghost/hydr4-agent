@@ -8,19 +8,42 @@
       "env": ["HYDRA_API_KEY"],
       "options": {
         "baseURL": "http://aggregator:3001/v1",
-        "timeout": 600000
+        "timeout": 2400000,
+	"streamingTimeout": 2400000
       },
       "models": {
         "nemotron-3-ultra-550b": {
           "name": "NVIDIA Nemotron 550B",
           "tool_call": true
         },
-        "deepseek-v4.1-flash": {
-          "name": "DeepSeek V4.1 (AMD/NVIDIA)",
-          "tool_call": true,
-          "reasoning": true,
-          "interleaved": { "field": "reasoning_content" }
-        }
+	"deepseek-v4.1-flash": {
+	  "name": "DeepSeek V4.1 Flash",
+    	  "tool_call": true,
+    	  "reasoning": true,
+    	  "interleaved": { "field": "reasoning_content" },
+    	  "limit": { "context": 1000000, "output": 384000 },
+    	  "options": {
+	    "reasoning_effort": "low",
+	  },
+	  "variants": {
+	    "low": { "reasoning_effort": "high" },
+	    "max": { "reasoning_effort": "max" }
+	  }
+	},
+	"deepseek-flash": {
+	  "name": "DeepSeek V4.1 Flash (Paid)",
+    	  "tool_call": true,
+    	  "reasoning": true,
+    	  "interleaved": { "field": "reasoning_content" },
+    	  "limit": { "context": 1000000, "output": 384000 },
+    	  "options": {
+	    "reasoning_effort": "low",
+	  },
+	  "variants": {
+	    "low": { "reasoning_effort": "high" },
+	    "max": { "reasoning_effort": "max" }
+	  }
+	}
       }
     }
   }
