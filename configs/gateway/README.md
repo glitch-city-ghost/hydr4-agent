@@ -13,6 +13,11 @@ Public, non-secret runtime settings are tracked in:
 configs/gateway/freellmapi/freellmapi.env
 ```
 
+Persistent gateway data lives at `~/hydr4-data/gateway`, mounted to
+`/app/server/data` in the container. The container-visible path is stable, so
+moving the host directory does not change how FreeLLMAPI reads its SQLite
+database.
+
 Secrets stay in the root `.env` (gitignored) and are documented in
 `.env.example`:
 

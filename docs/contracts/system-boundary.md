@@ -46,7 +46,7 @@ The host guarantees this directory exists and is writable by the user running `d
 | `~/hydr4-data/agent/config` | `/home/agent/.config` | Persistent agent state (gitconfig, backend auth). |
 | `~/hydr4-data/agent/local-share` | `/home/agent/.local/share/opencode` | OpenCode local data. |
 | `~/hydr4-data/secrets/ssh` | `/home/agent/.ssh` | Read-only bot SSH key, `known_hosts`, and SSH config for Git operations. |
-| `~/hydr4-data/aggregator/` | `/app/server/data` | Gateway state (legacy data path; currently SQLite, later Postgres data). |
+| `~/hydr4-data/gateway/` | `/app/server/data` | Gateway state (currently SQLite, later Postgres data). |
 
 ## 4. Secrets Boundary
 
