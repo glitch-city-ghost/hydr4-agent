@@ -3,5 +3,7 @@
 !.env.example
 secrets/
 data/
+.ssh/
+id_ed25519*
 *.log
 .DS_Store

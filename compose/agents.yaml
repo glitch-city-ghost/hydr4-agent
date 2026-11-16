@@ -24,7 +24,7 @@ services:
       - ~/hydr4-data/agent/config:/home/agent/.config
       - ~/hydr4-data/agent/local-share:/home/agent/.local/share/opencode
       - ../configs:/configs:ro
-      - ~/hydr4-data/secrets/pat:/home/agent/.config/pat:ro
+      - ~/hydr4-data/secrets/ssh:/home/agent/.ssh:ro
     networks:
       - agent-net
       - traefik-net

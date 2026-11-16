@@ -45,13 +45,13 @@ The host guarantees this directory exists and is writable by the user running `d
 |---|---|---|
 | `~/hydr4-data/agent/config` | `/home/agent/.config` | Persistent agent state (gitconfig, backend auth). |
 | `~/hydr4-data/agent/local-share` | `/home/agent/.local/share/opencode` | OpenCode local data. |
-| `~/hydr4-data/secrets/pat` | `/home/agent/.config/pat` | Read-only GitHub PAT for git operations. |
+| `~/hydr4-data/secrets/ssh` | `/home/agent/.ssh` | Read-only bot SSH key, `known_hosts`, and SSH config for Git operations. |
 | `~/hydr4-data/aggregator` | `/app/server/data` | Gateway state (currently SQLite, later Postgres data). |
 
 ## 4. Secrets Boundary
 
 The host is responsible for injecting secrets into the filesystem before the containers start.
-- **GitHub PAT:** `~/hydr4-data/secrets/pat/current-token`. The host must ensure this file contains only the token string (`github_pat_...`) and has `chmod 600` permissions. The container reads this via a credential helper and does not attempt to write to it.
+- **GitHub SSH key:** `~/hydr4-data/secrets/ssh/id_ed25519` (private) and `known_hosts`. The host must keep the directory at `chmod 700`, the private key at `chmod 600`, and `known_hosts` at `chmod 644`. The key belongs to a dedicated bot account, not the human account. The container mounts the directory read-only.
 - **LLM Provider Keys:** Passed via the `.env` file on the host. The container does not store these keys on disk.
 
 ## 5. Host Prerequisites
@@ -61,6 +61,7 @@ For `hydr4-agent` to function, the host (`l3rn4-nix`) **must** guarantee:
 2.  The external network `traefik-net` exists (`docker network create traefik-net`).
 3.  The Traefik container is running and attached to `traefik-net`.
 4.  The egress proxy (`mihomo`) is running and accessible on port `7890`.
+5.  `~/hydr4-data/secrets/ssh` exists with the bot key, `known_hosts`, and correct permissions.
 
 ## 6. Compliance
 
@@ -68,3 +69,4 @@ To verify the boundary is intact:
 1.  `docker network inspect traefik-net` shows Traefik and hydr4-agent containers.
 2.  `curl -H "Host: agent.localhost" http://127.0.0.1` resolves to the agent container.
 3.  `docker compose exec aggregator curl -s -x $UPSTREAM_PROXY https://api.ipify.org` returns an IP address, proving egress works.
+4.  `docker compose exec agent ssh -T git@github.com` returns `Hi <bot-account>!` and no shell access banner.

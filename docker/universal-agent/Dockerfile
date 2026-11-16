@@ -22,8 +22,8 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
-# Добавляем ключи GitHub в системный список доверенных хостов
-RUN mkdir -p /etc/ssh && ssh-keyscan github.com >> /etc/ssh/ssh_known_hosts 2>/dev/null
+# GitHub SSH host keys are supplied read-only at runtime via /home/agent/.ssh/known_hosts.
+# Do not ssh-keyscan at build time: that is TOFU and not reproducible.
 
 # Устанавливаем OpenCode и DeepSeek Harness (CLI)
 RUN npm install -g @opencode/cli dsh
@@ -33,19 +33,16 @@ RUN userdel -r node || true
 
 RUN useradd -u 1000 -U -m -s /bin/bash agent
 
-# Создаем директорию конфига и даем права пользователю agent (для тома)
-RUN mkdir -p /home/agent/.local/share/opencode
-RUN mkdir -p /home/agent/.config
-RUN chown -R agent:agent /home/agent
+# Создаем директории конфига и SSH, даем права пользователю agent (для томов)
+RUN mkdir -p /home/agent/.local/share/opencode /home/agent/.config /home/agent/.ssh \
+    && chmod 700 /home/agent/.ssh \
+    && chown -R agent:agent /home/agent
 
 USER agent
 
 WORKDIR /workspace
 
 # Копируем скрипт запуска
-
-COPY --chown=agent:agent git-credential-mount.sh /home/agent/.local/bin/git-credential-mount.sh
-RUN chmod +x /home/agent/.local/bin/git-credential-mount.sh
 
 COPY --chown=agent:agent entrypoint.sh /home/agent/entrypoint.sh
 RUN chmod +x /home/agent/entrypoint.sh

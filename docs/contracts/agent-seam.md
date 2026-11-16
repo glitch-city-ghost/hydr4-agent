@@ -36,6 +36,8 @@ The container guarantees that the following environment variables are available 
 
 *(Note: The backend may map `HYDRA_API_KEY` to standard variables like `OPENAI_API_KEY` internally, but the container guarantees `HYDRA_API_KEY`).*
 
+The entrypoint configures Git for SSH authentication: it sets `GIT_SSH_COMMAND` to use `/home/agent/.ssh/id_ed25519`, sets `GIT_TERMINAL_PROMPT=0`, removes any legacy `credential.helper`, and adds `/workspace` as a safe Git directory.
+
 ## 4. Filesystem Contract (Mounts)
 
 The backend must expect the following directories to be mounted and writable/readable:
@@ -45,7 +47,7 @@ The backend must expect the following directories to be mounted and writable/rea
 | `/workspace` | Read/Write | The code repository the agent is working on. |
 | `/configs/backends/${AGENT_BACKEND}/` | Read-Only | Backend-specific configuration files (e.g., OpenCode's `config.json`). |
 | `/configs/agent/` | Read-Only | Generic agent configuration (shared across all backends). |
-| `/home/agent/.config/pat/` | Read-Only | Contains `current-token` (GitHub PAT) for git operations. |
+| `/home/agent/.ssh/` | Read-Only | Dedicated bot SSH key (`id_ed25519`), `known_hosts`, and optional SSH config for Git access. |
 
 ## 5. Rules for Backend Scripts (`${AGENT_BACKEND}.sh`)
 
