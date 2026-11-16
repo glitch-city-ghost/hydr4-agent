@@ -13,9 +13,10 @@ services:
       - HTTP_PROXY=${UPSTREAM_PROXY}
       - HTTPS_PROXY=${UPSTREAM_PROXY}
       - NO_PROXY=localhost,127.0.0.1
-      - FALLBACK_TIME_BUDGET_MS=120000
-      - PROVIDER_STREAM_STALL_TIMEOUT_MS=300000  # 5 минут
-      - PROVIDER_TIMEOUT_CUSTOM=300000           # 5 минут
+      - FALLBACK_TIME_BUDGET_MS=600000
+      - PROVIDER_STREAM_STALL_TIMEOUT_MS=600000  # 5 минут
+      - PROVIDER_TIMEOUT_CUSTOM=600000           # 5 минут
+      - PROVIDER_TIMEOUT_NVIDIA=600000
     volumes:
       - ~/hydr4-data/aggregator:/app/server/data
     networks:
