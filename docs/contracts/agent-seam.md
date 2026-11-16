@@ -30,7 +30,7 @@ The container guarantees that the following environment variables are available 
 | Variable | Required | Description |
 |---|---|---|
 | `AGENT_BACKEND` | Yes | Selects the script to run (e.g., `opencode`, `dsh`). |
-| `OPENAI_BASE_URL` | Yes | The base URL of the model gateway (e.g., `http://aggregator:3001/v1`). |
+| `OPENAI_BASE_URL` | Yes | The base URL of the model gateway (e.g., `http://gateway:3001/v1`). |
 | `HYDRA_API_KEY` | Yes | The bearer token to authenticate with the model gateway. |
 | `GIT_CONFIG_GLOBAL` | Yes | Path to the isolated git config file (e.g., `/home/agent/.config/.gitconfig`). |
 

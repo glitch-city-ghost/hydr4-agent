@@ -1,4 +1,4 @@
-# Aggregator / Gateway Config
+# Gateway Config
 
 The model gateway is an interchangeable component behind an OpenAI-compatible
 API. The agent and the containers only depend on the gateway contract in
@@ -10,7 +10,7 @@ on a concrete implementation.
 Public, non-secret runtime settings are tracked in:
 
 ```text
-configs/aggregator/freellmapi/freellmapi.env
+configs/gateway/freellmapi/freellmapi.env
 ```
 
 Secrets stay in the root `.env` (gitignored) and are documented in
@@ -19,9 +19,9 @@ Secrets stay in the root `.env` (gitignored) and are documented in
 - `ENCRYPTION_KEY` — FreeLLMAPI database encryption key;
 - `FREELMAPI_UNIFIED_KEY` — unified API key used by the agent;
 - `UPSTREAM_PROXY` — host egress proxy, mapped to `HTTP_PROXY`/`HTTPS_PROXY`
-  by `compose/aggregator.yaml`.
+  by `compose/gateway.yaml`.
 
-`compose/aggregator.yaml` is intentionally limited to the generic service
+`compose/gateway.yaml` is intentionally limited to the generic service
 definition: image, port, networks, labels, proxy mapping, volume, healthcheck,
 and resources. Gateway-specific runtime settings belong in this directory, not
 in compose.
@@ -31,4 +31,4 @@ in compose.
 The target is to add a LiteLLM configuration here (for example
 `litellm.config.yaml` plus a gateway-specific env file) and select it through a
 gateway-specific compose override. The agent-facing contract must stay stable:
-`http://aggregator:3001/v1`, bearer `HYDRA_API_KEY`, and the same model IDs.
+`http://gateway:3001/v1`, bearer `HYDRA_API_KEY`, and the same model IDs.

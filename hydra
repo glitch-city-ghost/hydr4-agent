@@ -13,16 +13,16 @@ fi
 
 case "$1" in
     start)
-        echo -e "${YELLOW}Запуск Hydra (Агрегатор + Агент)...${NC}"
-        docker compose --profile opencode up -d
+        echo -e "${YELLOW}Запуск Hydra (Gateway + Agent)...${NC}"
+        docker compose --profile opencode up -d --remove-orphans
         
         echo -e "${GREEN}Готово!${NC}"
-        echo -e "• Agent UI:      http://agent.localhost"
-        echo -e "• Aggregator UI: http://api.localhost"
+        echo -e "• Agent UI:   http://agent.localhost"
+        echo -e "• Gateway UI: http://api.localhost"
         ;;
     stop)
         echo -e "${YELLOW}Остановка Hydra...${NC}"
-        docker compose --profile opencode down
+        docker compose --profile opencode down --remove-orphans
         ;;
     web)
         echo -e "Открой в браузере: ${GREEN}http://localhost:4096${NC}"

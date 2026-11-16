@@ -4,7 +4,7 @@
 
 ## 🚀 Upcoming & Deferred Work
 
-### 1. Migrate Aggregator to LiteLLM
+### 1. Migrate Gateway to LiteLLM
 - **Status:** In Progress
 - **Context:** FreeLLMAPI handles 429 errors poorly. LiteLLM supports `Retry-After` and fallbacks.
 - **Goal:** Replace FreeLLMAPI image with LiteLLM + Postgres. Update `.env` and contracts accordingly.
@@ -26,5 +26,5 @@
 
 ### 5. Monitoring and Observability
 - **Status:** Pending
-- **Context:** We only have Docker logs and the aggregator dashboard.
+- **Context:** We only have Docker logs and the gateway dashboard.
 - **Goal:** Deploy Prometheus + Grafana for LLM latency and token metrics.
