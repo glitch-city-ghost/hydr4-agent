@@ -9,7 +9,8 @@
       "settings": {
         "baseURL": "http://aggregator:3001/v1",
         "timeout": 2400000,
-        "chunkTimeout": 2400000
+        "headerTimeout": 2400000,
+        "chunkTimeout": 2400000,
       },
       "models": {
         "nemotron-3-ultra-550b": {
@@ -26,6 +27,7 @@
         "baseURL": "http://aggregator:3001/v1",
         "apiKey": "{env:HYDRA_API_KEY}",
         "timeout": 2400000,
+        "headerTimeout": 2400000,
         "chunkTimeout": 2400000
       }
     }
