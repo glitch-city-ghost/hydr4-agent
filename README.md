@@ -18,7 +18,7 @@
            |   ( )   |       |  _  |  | |  | |_| |  _ <  / ___ \ 
             \       /        |_| |_|  |_|  |____/|_| \_\/_/   \_\
            /`\     /`\       
-          /   `---'   \      [ Multi-Agent Sandbox & Aggregator ]
+          /   `---'   \      [ Multi-Agent Sandbox & Gateway ]
          /      |      \     
 ```
 
@@ -39,7 +39,7 @@ We don't take "Service Unavailable" for an answer. We route around it.
 ### 🛡️ The Three Pillars of the Hydra
 
 1. **The Head (Agent):** `OpenCode` running in a Web UI. It's smart, it's fast, and it's completely blind to your host system. It only sees `/workspace`. 
-2. **The Neck (Aggregator):** `FreeLLMAPI`. A local OpenAI-compatible proxy. It takes your requests, masks your keys, rotates them on `429 Too Many Requests`, and talks to the outside world so your agent doesn't have to.
+2. **The Neck (Gateway):** `FreeLLMAPI`. A local OpenAI-compatible proxy. It takes your requests, masks your keys, rotates them on `429 Too Many Requests`, and talks to the outside world so your agent doesn't have to.
 3. **The Arsenal (Models):** We don't settle for small models. We run **NVIDIA Nemotron Ultra 550B** (a beast with a 1M context window), **DeepSeek V4 Flash**, and **Gemini 3.5 Flash Lite** — all routed through one unified endpoint.
 
 ---
@@ -50,7 +50,7 @@ We don't take "Service Unavailable" for an answer. We route around it.
 graph LR
     A[Windows Host] -->|WSL2 Mirrored Net| B(NixOS Environment)
     B -->|127.0.0.1| C[OpenCode Web UI :4096]
-    C -->|Internal Docker Net| D[FreeLLMAPI Aggregator :3001]
+    C -->|Internal Docker Net| D[FreeLLMAPI Gateway :3001]
     
     D -->|Via mihomo Proxy| E[NVIDIA NIM]
     D -->|Via mihomo Proxy| F[Official DeepSeek API]
@@ -64,8 +64,8 @@ graph LR
 
 ## 📂 Repository Structure
 
-*   `compose/` — Modular Docker Compose fragments (`aggregator`, `agents`, `network`).
-*   `configs/` — `opencode.json` and other agent configs (Mounted as `:ro`).
+*   `compose/` — Modular Docker Compose fragments (`gateway`, `agents`, `network`).
+*   `configs/` — Agent backend configs and gateway-specific settings (mounted read-only where needed).
 *   `docker/` — The Universal Agent Dockerfile. One image to rule them all.
 *   `docs/` — Contracts, ADRs (like why we still use `172.17.0.1`), and the **AI Code Review**.
 *   `workspace/` — The only folder the agent can touch. Keep it clean.
@@ -92,7 +92,7 @@ nano .env # Add FREELMAPI_UNIFIED_KEY, OPENCODE_PASSWORD, etc.
 
 Open your browser:
 *   **Agent UI:** `http://localhost:4096`
-*   **Aggregator Dashboard:** `http://localhost:3001`
+*   **Gateway Dashboard:** `http://localhost:3001`
 
 ---
 
@@ -102,7 +102,7 @@ We are paranoid, and we are proud of it.
 *   **No Host Access:** The agent cannot read your personal `.ssh` keys or your Windows drives. It only sees `./workspace`, its own agent config, and a read-only bot SSH key.
 *   **Localhost Only:** All ports are bound to `127.0.0.1`. No one on your local network can touch your agent.
 *   **GitHub Access:** The agent authenticates as a dedicated bot account with an SSH key. No GitHub PAT is stored in the container. The bot can push only to its own fork; you review and merge pull requests.
-*   **Key Isolation:** Agents never see the raw provider keys (NVIDIA, Google). They only get `HYDRA_API_KEY`, which talks to the aggregator.
+*   **Key Isolation:** Agents never see the raw provider keys (NVIDIA, Google). They only get `HYDRA_API_KEY`, which talks to the gateway.
 *   **Resource Limits:** The agent is capped at `4G` RAM and `2.0` CPU. It won't crash your WSL2 host if it tries to run a fork bomb.
 
 ---

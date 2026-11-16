@@ -1,18 +1,20 @@
 services:
-  aggregator:
+  gateway:
     image: ghcr.io/tashfeenahmed/freellmapi@sha256:da6829d4ae510b968aa8bea6817a3647f5396c312392bbf44f47942d0aec2d96
-    container_name: hydr4-aggregator
+    container_name: hydr4-gateway
     ports:
       - "127.0.0.1:3001:3001" # <--- Только локально
     env_file:
-      # Gateway-specific public settings live in configs/aggregator/freellmapi/.
+      # Gateway-specific public settings live in configs/gateway/freellmapi/.
       - ../.env
-      - ../configs/aggregator/freellmapi/freellmapi.env
+      - ../configs/gateway/freellmapi/freellmapi.env
     environment:
       # Host-specific egress proxy. The value itself stays in root .env.
       - HTTP_PROXY=${UPSTREAM_PROXY}
       - HTTPS_PROXY=${UPSTREAM_PROXY}
     volumes:
+      # Data path intentionally kept as "aggregator" for compatibility.
+      # Rename/migrate the volume separately.
       - ~/hydr4-data/aggregator:/app/server/data
     networks:
       - agent-net
@@ -25,9 +27,9 @@ services:
       retries: 3
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.aggregator.rule=Host(`api.localhost`)"
-      - "traefik.http.routers.aggregator.entrypoints=web"
-      - "traefik.http.services.aggregator.loadbalancer.server.port=3001"
+      - "traefik.http.routers.gateway.rule=Host(`api.localhost`)"
+      - "traefik.http.routers.gateway.entrypoints=web"
+      - "traefik.http.services.gateway.loadbalancer.server.port=3001"
     deploy:
       resources:
         limits:

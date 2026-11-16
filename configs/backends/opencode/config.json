@@ -3,14 +3,14 @@
   "model": "hydr4/nemotron-3-ultra-550b",
   "providers": {
     "hydr4": {
-      "name": "Hydra Aggregator",
+      "name": "Hydra Gateway",
       "env": ["HYDRA_API_KEY"],
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
-        "baseURL": "http://aggregator:3001/v1",
+        "baseURL": "http://gateway:3001/v1",
         "timeout": 2400000,
         "headerTimeout": 2400000,
-        "chunkTimeout": 2400000,
+        "chunkTimeout": 2400000
       },
       "models": {
         "nemotron-3-ultra-550b": {
@@ -24,7 +24,7 @@
     "deepseek": {
       "env": ["HYDRA_API_KEY"],
       "settings": {
-        "baseURL": "http://aggregator:3001/v1",
+        "baseURL": "http://gateway:3001/v1",
         "apiKey": "{env:HYDRA_API_KEY}",
         "timeout": 2400000,
         "headerTimeout": 2400000,

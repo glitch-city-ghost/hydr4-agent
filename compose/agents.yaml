@@ -14,7 +14,7 @@ services:
       - "127.0.0.1:4096:4096"
     environment:
       - AGENT_BACKEND=${AGENT_BACKEND:-opencode}
-      - OPENAI_BASE_URL=http://aggregator:3001/v1
+      - OPENAI_BASE_URL=http://gateway:3001/v1
       - HYDRA_API_KEY=${FREELMAPI_UNIFIED_KEY}
       - OPENCODE_PASSWORD=${OPENCODE_PASSWORD}
       - OPENCODE_CONFIG=/configs/backends/opencode/config.json
@@ -30,7 +30,7 @@ services:
       - traefik-net
     restart: unless-stopped
     depends_on:
-      aggregator:
+      gateway:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://127.0.0.1:4096/global/health"]

@@ -1,6 +1,6 @@
 # Decisions (Architectural Decision Records)
 
-## ADR-0001 — Aggregator runs in Docker (Variant A)
+## ADR-0001 — Gateway runs in Docker (Variant A)
 
 **Status:** Accepted.
 
@@ -9,15 +9,15 @@
 **Decision:** Variant A.
 
 **Rationale:**
-- `l3rn4-nix` explicitly does not want ownership of the aggregator.
-- Swapping aggregators must not require `nix-rebuild`.
-- Aggregator is application logic, not infrastructure.
-- Agents and aggregator share one Docker network; no host-loopback ambiguity.
+- `l3rn4-nix` explicitly does not want ownership of the gateway.
+- Swapping gateways must not require `nix-rebuild`.
+- Gateway is application logic, not infrastructure.
+- Agents and gateway share one Docker network; no host-loopback ambiguity.
 - Secrets live in `.env` (gitignored) for development, with a clear path to Docker secrets later.
 
 **Consequences:**
 - mihomo must accept connections from the Docker bridge (see prerequisites in README).
-- Aggregator image pinning becomes part of the repo.
+- Gateway image pinning becomes part of the repo.
 
 ---
 
@@ -26,7 +26,7 @@
 **Status:** Accepted.
 
 **Context:** 
-In WSL2 with `networkingMode=mirrored`, Docker's default `userland-proxy` conflicted with the host's NAT rules. This caused external POST requests (like those to the aggregator) to be silently dropped or time out.
+In WSL2 with `networkingMode=mirrored`, Docker's default `userland-proxy` conflicted with the host's NAT rules. This caused external POST requests (like those to the gateway) to be silently dropped or time out.
 
 **Decision:**
 Disable `userland-proxy` in the Docker daemon settings (`virtualisation.docker.daemon.settings = { userland-proxy = false; };`) inside `l3rn4-nix`. 
@@ -50,7 +50,7 @@ We deliberately keep standard bridge networking so agents can run `git clone` an
 
 **Consequences:**
 - Agents have full egress to the internet (bypassing mihomo for raw traffic).
-- The setup is WSL2-specific. To mitigate key leakage, agents only receive the `HYDRA_API_KEY` (aggregator key), not the raw provider keys.
+- The setup is WSL2-specific. To mitigate key leakage, agents only receive the `HYDRA_API_KEY` (gateway key), not the raw provider keys.
 
 ---
 
@@ -85,7 +85,7 @@ Initially, the project used Docker Named Volumes (`agent-data`, `opencode-data`,
 Migrate all persistent storage to explicit **Bind Mounts** located in a centralized directory outside the Git repository: `~/hydr4-data/`.
 
 **Structure:**
-- `~/hydr4-data/aggregator/` — FreeLLMAPI database.
+- `~/hydr4-data/aggregator/` — FreeLLMAPI database (legacy data path; kept for data compatibility).
 - `~/hydr4-data/agent/config/` — Agent configurations (`.config`).
 - `~/hydr4-data/agent/local-share/` — OpenCode chat history and sessions.
 - `~/hydr4-data/secrets/` — (Future) SSH keys and sensitive tokens.

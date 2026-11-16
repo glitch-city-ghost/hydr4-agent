@@ -59,7 +59,7 @@ EOF
 
 # 1. Проверка прокси mihomo
 echo -n "1. Проверка прокси mihomo из контейнера... "
-PROXY_IP=$(docker compose exec -T aggregator node -e "
+PROXY_IP=$(docker compose exec -T gateway node -e "
 const { request, ProxyAgent } = require('undici');
 const proxyAgent = new ProxyAgent('http://172.17.0.1:7890');
 request('https://api.ipify.org', { dispatcher: proxyAgent })
@@ -97,7 +97,7 @@ fi
 
 # 4. Проверка Tool Calling изнутри Docker
 echo -n "4. Проверка Tool Calling изнутри Docker... "
-DOCKER_RESPONSE=$(docker compose exec -T aggregator node -e "
+DOCKER_RESPONSE=$(docker compose exec -T gateway node -e "
 fetch('http://127.0.0.1:3001/v1/chat/completions', {
   method: 'POST',
   headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer ${FREELMAPI_UNIFIED_KEY}'},

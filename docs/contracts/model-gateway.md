@@ -2,7 +2,7 @@
 
 **Version:** 1.0  
 **Status:** Active  
-**Scope:** Defines the API contract between the AI agent and the model aggregator (Gateway).
+**Scope:** Defines the API contract between the AI agent and the model gateway.
 
 ## 1. Purpose
 
@@ -12,7 +12,7 @@ The contract is a strict subset of the **OpenAI Chat Completions API**. If the g
 
 ## 2. The Interface
 
-- **Base URL:** `http://aggregator:3001/v1` (resolved via Docker internal DNS).
+- **Base URL:** `http://gateway:3001/v1` (resolved via Docker internal DNS).
 - **Endpoint:** `POST /chat/completions`
 - **Authentication:** Bearer token via the `Authorization: Bearer ${HYDRA_API_KEY}` header.
 - **Protocol:** HTTP/1.1 or HTTP/2.
