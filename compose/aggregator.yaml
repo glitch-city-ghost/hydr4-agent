@@ -5,18 +5,13 @@ services:
     ports:
       - "127.0.0.1:3001:3001" # <--- Только локально
     env_file:
+      # Gateway-specific public settings live in configs/aggregator/freellmapi/.
       - ../.env
+      - ../configs/aggregator/freellmapi/freellmapi.env
     environment:
-      - PORT=3001
-      - HOST_BIND=0.0.0.0
-      - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      # Host-specific egress proxy. The value itself stays in root .env.
       - HTTP_PROXY=${UPSTREAM_PROXY}
       - HTTPS_PROXY=${UPSTREAM_PROXY}
-      - NO_PROXY=localhost,127.0.0.1
-      - FALLBACK_TIME_BUDGET_MS=600000
-      - PROVIDER_STREAM_STALL_TIMEOUT_MS=600000  # 5 минут
-      - PROVIDER_TIMEOUT_CUSTOM=600000           # 5 минут
-      - PROVIDER_TIMEOUT_NVIDIA=600000
     volumes:
       - ~/hydr4-data/aggregator:/app/server/data
     networks:
