@@ -99,8 +99,9 @@ Open your browser:
 ## 🔒 Zero-Trust Security Model
 
 We are paranoid, and we are proud of it.
-*   **No Host Access:** The agent cannot read your `.ssh` keys or your Windows drives. Only `./workspace`.
+*   **No Host Access:** The agent cannot read your personal `.ssh` keys or your Windows drives. It only sees `./workspace`, its own agent config, and a read-only bot SSH key.
 *   **Localhost Only:** All ports are bound to `127.0.0.1`. No one on your local network can touch your agent.
+*   **GitHub Access:** The agent authenticates as a dedicated bot account with an SSH key. No GitHub PAT is stored in the container. The bot can push only to its own fork; you review and merge pull requests.
 *   **Key Isolation:** Agents never see the raw provider keys (NVIDIA, Google). They only get `HYDRA_API_KEY`, which talks to the aggregator.
 *   **Resource Limits:** The agent is capped at `4G` RAM and `2.0` CPU. It won't crash your WSL2 host if it tries to run a fork bomb.
 
