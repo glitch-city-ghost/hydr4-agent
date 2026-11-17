@@ -6,7 +6,15 @@
 
 ## 1. Purpose
 
-This document defines the explicit contract for running an AI agent inside the `hydr4-agent` container. The goal is to make the agent backend **swappable**: swapping the agent (for example from OpenCode to DSH) must not require editing the `Dockerfile` or the entrypoint, only selecting a backend and its configuration folder.
+This document defines the explicit contract for running an AI agent inside the `hydr4-agent` container. The goal is to make the agent backend **swappable**: swapping the agent (for example from OpenCode to DSH) must not require editing the `Dockerfile`, the entrypoint, the Compose files, Traefik routes, or the `hydra` wrapper.
+
+The seam is defined in terms of **interfaces**, not implementations:
+
+- an **environment interface** (which variables the container provides);
+- a **filesystem interface** (which paths are mounted, and how);
+- a **network interface** (which container name, which port, which health endpoint).
+
+Any agent that satisfies these three interfaces is a valid backend, regardless of its log format, process model, CLI flags, or configuration format.
 
 ## 2. The Seam
 
@@ -35,7 +43,30 @@ Note on DSH: the backend script exists, but DSH's own settings file is not mount
 the container today. There is no `/configs/backends/${AGENT_BACKEND}/` lookup in the code — any
 backend directory is only useful if its script is told to load it.
 
-## 3. Environment Contract (Inputs)
+## 3. The Network Interface
+
+This is the part of the contract that other components depend on. It is fixed, and every backend
+must satisfy it, whatever agent runs inside. Two things are standardised:
+
+- **the port** — any agent backend serves on `4096`;
+- **the health endpoint** — any agent backend answers `GET /global/health`.
+
+| Property | Value | Consumed by |
+|---|---|---|
+| Container name | `hydr4-agent` | Traefik routes in `l3rn4-nix` |
+| Listening interface inside the container | `0.0.0.0` | Docker port publishing |
+| Container port | `4096` | Docker port publishing, the healthcheck |
+| Host binding | `127.0.0.1:4096` | local use only, not exposed to the LAN |
+| Health endpoint | `GET /global/health` | the Compose healthcheck |
+
+The agent server must bind `0.0.0.0` and not `127.0.0.1`. Binding loopback inside the container
+makes the published port unreachable, and the container will never report `healthy`.
+
+The port may change only if the Compose file and the host's `routes.yaml` change together:
+`compose/agents.yaml` publishes `4096` and `l3rn4-nix/traefik-dynamic/routes.yaml` routes
+`hydr4-agent:4096`. A backend may not choose its own port.
+
+## 4. The Environment Interface
 
 `compose/agents.yaml` sets the following variables for every backend:
 
@@ -50,7 +81,7 @@ backend directory is only useful if its script is told to load it.
 
 *(Note: the backend may map `HYDRA_API_KEY` to standard variables like `OPENAI_API_KEY` internally, but the container guarantees `HYDRA_API_KEY`).*
 
-### 3.1 Git configuration done by the entrypoint
+### 4.1 Git configuration done by the entrypoint
 
 Before delegating, the entrypoint prepares Git for the agent:
 
@@ -61,9 +92,9 @@ Before delegating, the entrypoint prepares Git for the agent:
 - if `/home/agent/.ssh/id_ed25519` exists, sets `GIT_SSH_COMMAND` to that key with `known_hosts` and strict host-key checking;
 - adds `/workspace` to `safe.directory`.
 
-### 3.2 Configuring DSH
+### 4.2 Configuring DSH
 
-The DSH backend script is two lines: export `OPENAI_API_KEY` from `HYDRA_API_KEY`, then `exec dsh web ... 4096`. The agent must still configure DSH to point at the gateway, exactly like the OpenCode example:
+The DSH backend script is two lines: export `OPENAI_API_KEY` from `HYDRA_API_KEY`, then `exec dsh web --port 4096`. The agent must still configure DSH to point at the gateway, exactly like the OpenCode example:
 
 ```yaml
 llm-pi-ai:
@@ -77,16 +108,17 @@ llm-pi-ai:
 `apiKeyEnv` names the environment variable that holds the key, so the backend must export it
 before `dsh` starts. The file is not mounted yet; this block is the reference to copy when it is.
 
-### 3.3 Minimal rules for backend scripts (`${AGENT_BACKEND}.sh`)
+## 5. Rules for Backend Scripts (`${AGENT_BACKEND}.sh`)
 
 Any script placed in `/agent/backends/` must:
 
 1. **Not daemonize.** Use `exec` for the last command so the container's lifecycle stays tied to the agent process.
-2. **Not hardcode the gateway URL.** Read it from `OPENAI_BASE_URL` / `HYDRA_API_KEY` (or map those to whatever the tool expects).
-3. **Not write to global system configs.** Respect `GIT_CONFIG_GLOBAL`.
-4. **Propagate the exit code.** If the agent crashes, the container must exit non-zero so the runtime can restart it or fail visibly.
+2. **Bind the standard port.** Serve on `0.0.0.0:4096` and expose `GET /global/health`. Do not pick another port.
+3. **Not hardcode the gateway URL.** Read it from `OPENAI_BASE_URL` / `HYDRA_API_KEY` (or map those to whatever the tool expects).
+4. **Not write to global system configs.** Respect `GIT_CONFIG_GLOBAL`.
+5. **Propagate the exit code.** If the agent crashes, the container must exit non-zero so the runtime can restart it or fail visibly.
 
-## 4. Running a backend
+## 6. Running a backend
 
 `compose/agents.yaml` declares `profiles: ["dsh", "opencode"]`, so the `agent` service starts only
 when one of them is selected on the Compose command line. They are **not** tied to the
@@ -98,7 +130,7 @@ when one of them is selected on the Compose command line. They are **not** tied 
 - DSH therefore needs both: its profile selected, and `AGENT_BACKEND=dsh`. That is a manual path today:
   `AGENT_BACKEND=dsh docker compose --profile dsh up -d`. `hydra` does not offer it.
 
-## 5. Reference implementation: `opencode.sh`
+## 7. Reference implementation: `opencode.sh`
 
 The repository script, for reference:
 
@@ -113,13 +145,13 @@ echo "🚀 Starting OpenCode Web Server..."
 exec opencode serve --hostname 0.0.0.0 --port 4096
 ```
 
-## 6. Compliance
+## 8. Compliance
 
 A backend is compliant if the following holds, regardless of which agent binary is inside it:
 
 1. its script lives at `/agent/backends/${AGENT_BACKEND}.sh` in the image;
 2. that script ends with `exec <agent>` and the agent process becomes PID 1 of the container;
-3. it listens on port `4096` and answers `GET /global/health` on that port;
+3. the agent listens on `0.0.0.0:4096` and answers `GET /global/health` on that port;
 4. the process exits non-zero when the agent exits non-zero.
 
 The contract says nothing about log contents. `docker compose ps`, the container healthcheck and
