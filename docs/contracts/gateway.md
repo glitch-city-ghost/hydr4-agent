@@ -33,7 +33,7 @@ the service name (`gateway`); the host reaches the same container through Traefi
 |---|---|
 | API | OpenAI-compatible: `POST /v1/chat/completions`, `GET /v1/models` |
 | Protocol | HTTP |
-| Health endpoint | `GET /healthz` answers 2xx |
+| Port | Answers on `0.0.0.0:3001` |
 | Streaming | `stream: true` returns SSE |
 | Tools | `tools` are passed upstream, `tool_calls` come back |
 | Errors | Standard OpenAI error object |

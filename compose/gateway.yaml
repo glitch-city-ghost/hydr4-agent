@@ -19,7 +19,14 @@ services:
       - traefik-net
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      # Gateway-agnostic: depends on bash and its /dev/tcp builtin, not on node
+      # (FreeLLMAPI only) or curl (some images only).
+      # It reads the response through fd 3, never from stdin, and passes on the
+      # first bytes. "Listening but broken" is still caught by ./hydra check.
+      # The agent depends on this healthcheck, so it must not fail over a provider
+      # outage. Do not add an HTTP status check here unless the gateway is known to
+      # answer without touching its providers.
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/127.0.0.1/3001 2>/dev/null && printf 'GET /healthz HTTP/1.0\\r\\nHost: localhost\\r\\nConnection: close\\r\\n\\r\\n' >&3 && IFS= read -r -t 3 -n 12 body <&3 && [ -n \"$body\" ]"]
       interval: 15s
       timeout: 5s
       retries: 3
