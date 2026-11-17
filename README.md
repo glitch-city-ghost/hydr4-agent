@@ -11,6 +11,8 @@
 
 </div>
 
+> 🚨 **Everything broke down?** Open [`WTF_EVERYTHING_BROKE_DOWN_HELP.md`](WTF_EVERYTHING_BROKE_DOWN_HELP.md). Do not delete `~/hydr4-data`.
+
 ```text
            (\,;'\,;/)         _   _ __   __ ____  ____      _    
             \       /        | | | |\ \ / /|  _ \|  _ \    / \   
@@ -69,7 +71,8 @@ graph LR
 *   `docker/` — The Universal Agent Dockerfile. One image to rule them all.
 *   `docs/` — Contracts, ADRs (like why we still use `172.17.0.1`), and the **AI Code Review**.
 *   `workspace/` — The only folder the agent can touch. Keep it clean.
-*   `hydra` — The CLI script. Your one-stop-shop for `start`, `stop`, and `cli`.
+*   `hydra` — The CLI script. Thin wrapper for `start`, `stop`, `restart`, `rebuild`, `status`, `logs`, `check`, and `cli`.
+*   `WTF_EVERYTHING_BROKE_DOWN_HELP.md` — Open this when everything is on fire. Do not panic. Do not delete `~/hydr4-data`.
 
 ---
 
@@ -88,6 +91,9 @@ nano .env # Add FREELMAPI_UNIFIED_KEY, OPENCODE_PASSWORD, etc.
 
 # Awaken the Hydra
 ./hydra start
+
+# Make sure the obvious stuff is alive (no tokens spent)
+./hydra check
 ```
 
 Open your browser:

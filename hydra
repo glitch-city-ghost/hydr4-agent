@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
 
+# Hydra CLI — тонкая и прозрачная обвязка над Docker Compose.
+# Она управляет контейнерами. Она не трогает Git, данные и скрытое состояние.
+#
+# Авария? Читай WTF_EVERYTHING_BROKE_DOWN_HELP.md
+
+set -euo pipefail
+
+cd "$(dirname "$0")" || exit 1
+
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
@@ -7,32 +16,93 @@ NC='\033[0m'
 # Загружаем переменные из .env
 if [ -f .env ]; then
     set -a
+    # shellcheck disable=SC1091
     . ./.env
     set +a
 fi
 
-case "$1" in
+COMPOSE=(docker compose --profile opencode)
+WAIT_TIMEOUT=180
+
+usage() {
+    cat <<'EOF'
+Hydra CLI — тонкая обвязка над Docker Compose.
+
+Использование: ./hydra <команда> [аргументы]
+
+  start      Поднять стек и дождаться healthcheck'ов
+  stop       Остановить стек
+  restart    Пересоздать контейнеры без пересборки (подхватить configs/)
+  rebuild    Пересобрать образы с нуля и пересоздать контейнеры
+  status     Показать контейнеры, текущий коммит и состояние рабочего дерева
+  logs [svc] Смотреть логи (по умолчанию все сервисы)
+  check      Поверхностная проверка без записи (без вызовов моделей и токенов)
+  web        Показать URL Agent UI
+  cli        Открыть shell внутри контейнера агента
+
+Авария: WTF_EVERYTHING_BROKE_DOWN_HELP.md
+EOF
+}
+
+case "${1:-}" in
     start)
         echo -e "${YELLOW}Запуск Hydra (Gateway + Agent)...${NC}"
-        docker compose --profile opencode up -d --remove-orphans
-        
-        echo -e "${GREEN}Готово!${NC}"
+        "${COMPOSE[@]}" up -d --wait --wait-timeout "$WAIT_TIMEOUT" --remove-orphans
+
+        echo -e "${GREEN}Готово.${NC}"
         echo -e "• Agent UI:   http://agent.localhost"
         echo -e "• Gateway UI: http://api.localhost"
+        echo -e "Запусти ${GREEN}./hydra check${NC}, чтобы проверить очевидное."
         ;;
     stop)
         echo -e "${YELLOW}Остановка Hydra...${NC}"
-        docker compose --profile opencode down --remove-orphans
+        "${COMPOSE[@]}" down --remove-orphans
+        ;;
+    restart)
+        echo -e "${YELLOW}Пересоздаём контейнеры (без пересборки)...${NC}"
+        "${COMPOSE[@]}" up -d --force-recreate --wait --wait-timeout "$WAIT_TIMEOUT" --remove-orphans
+        echo -e "${GREEN}Готово.${NC}"
+        ;;
+    rebuild)
+        echo -e "${YELLOW}Пересборка с нуля (это может занять время)...${NC}"
+        "${COMPOSE[@]}" build --pull --no-cache
+        "${COMPOSE[@]}" pull --ignore-pull-failures gateway
+        "${COMPOSE[@]}" up -d --force-recreate --wait --wait-timeout "$WAIT_TIMEOUT" --remove-orphans
+        echo -e "${GREEN}Готово.${NC}"
+        echo -e "Запусти ${GREEN}./hydra check${NC}, чтобы проверить очевидное."
+        ;;
+    status)
+        "${COMPOSE[@]}" ps --all
+        echo
+        printf 'Коммит:       '
+        git log -1 --oneline
+        if [ -n "$(git status --porcelain)" ]; then
+            echo "Дерево:       грязное (есть незакоммиченные изменения)"
+        else
+            echo "Дерево:       чистое"
+        fi
+        ;;
+    logs)
+        shift
+        "${COMPOSE[@]}" logs -f --tail=100 "$@"
+        ;;
+    check)
+        exec bash scripts/check.sh
         ;;
     web)
         echo -e "Открой в браузере: ${GREEN}http://localhost:4096${NC}"
         ;;
     cli)
         echo -e "${YELLOW}Открытие терминала внутри агента...${NC}"
-        docker compose exec agent bash
+        "${COMPOSE[@]}" exec agent bash
+        ;;
+    help|--help|-h|"")
+        usage
         ;;
     *)
-        echo "Использование: ./hydra {start|stop|web|cli}"
+        echo "Неизвестная команда: $1" >&2
+        echo
+        usage
         exit 1
         ;;
 esac

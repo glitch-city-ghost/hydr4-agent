@@ -67,7 +67,9 @@ The agent must *never* see raw upstream provider errors (e.g., nginx 502 pages, 
 
 ## 7. Compliance
 
-To verify the gateway satisfies this contract, run `scripts/smoke-test.sh` which tests:
+To verify the obvious, token-free basics (config, containers, local gateway, DNS, ingress), run `./hydra check`.
+
+For the full contract (which does call providers and therefore spends tokens), run `scripts/smoke-test.sh`, which tests:
 1. Standard completion (HTTP 200).
 2. Tool calling (`tool_calls` present in response).
 3. Model discovery (`GET /models`).
