@@ -59,17 +59,21 @@ EOF
 
 # 1. Check the mihomo proxy
 echo -n "1. Checking the mihomo proxy from inside the container... "
-PROXY_IP=$(docker compose exec -T gateway node -e "
+if [ -z "${UPSTREAM_PROXY:-}" ]; then
+    echo -e "${RED}ERROR (UPSTREAM_PROXY is not set in .env)${NC}"
+else
+    PROXY_IP=$(docker compose exec -T -e UPSTREAM_PROXY="$UPSTREAM_PROXY" gateway node -e "
 const { request, ProxyAgent } = require('undici');
-const proxyAgent = new ProxyAgent('http://172.17.0.1:7890');
+const proxyAgent = new ProxyAgent(process.env.UPSTREAM_PROXY);
 request('https://api.ipify.org', { dispatcher: proxyAgent })
   .then(r => r.body.text()).then(ip => console.log(ip)).catch(() => console.log('FAIL'));
 " 2>/dev/null | tr -d '\r\n')
 
-if [ "$PROXY_IP" != "FAIL" ] && [ -n "$PROXY_IP" ]; then
-    echo -e "${GREEN}OK (IP: $PROXY_IP)${NC}"
-else
-    echo -e "${RED}ERROR (could not get an IP through the proxy)${NC}"
+    if [ "$PROXY_IP" != "FAIL" ] && [ -n "$PROXY_IP" ]; then
+        echo -e "${GREEN}OK (IP: $PROXY_IP)${NC}"
+    else
+        echo -e "${RED}ERROR (could not get an IP through $UPSTREAM_PROXY)${NC}"
+    fi
 fi
 
 # 2. Check API availability

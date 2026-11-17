@@ -1,7 +1,7 @@
 # Agent Seam Contract
 
-**Version:** 1.0  
-**Status:** Active  
+**Version:** 1.0
+**Status:** Active
 **Scope:** Defines the boundary between the container infrastructure and any AI agent backend (OpenCode, DSH, Aider, etc.).
 
 ## 1. Purpose
@@ -10,7 +10,7 @@ This document defines the explicit contract for running an AI agent inside the `
 
 ## 2. The Seam
 
-The container image is built with a generic entrypoint. It does not know *which* agent it is running. The entrypoint evaluates the environment variable `AGENT_BACKEND` and executes the corresponding shell script.
+The container image is built with a generic entrypoint. It does not know *which* agent it is running. The entrypoint evaluates the environment variable `AGENT_BACKEND` and executes the corresponding shell script. To run a non-default backend, the matching Compose profile must also be active (see §4.1).
 
 **Invocation:**
 The container will execute exactly this path:
@@ -49,6 +49,19 @@ The backend must expect the following directories to be mounted and writable/rea
 | `/configs/agent/` | Read-Only | Generic agent configuration (shared across all backends). |
 | `/home/agent/.ssh/` | Read-Only | Dedicated bot SSH key (`id_ed25519`), `known_hosts`, and optional SSH config for Git access. |
 
+### 4.1 Compose profiles
+
+`compose/agents.yaml` declares `profiles: ["dsh", "opencode"]`. Compose starts the `agent` service
+only when one of those profiles is active **and** `AGENT_BACKEND` names the matching backend.
+Both must agree:
+
+```bash
+AGENT_BACKEND=dsh docker compose --profile dsh up -d
+```
+
+A backend that is requested via `AGENT_BACKEND` but whose profile is not active will never run.
+The `opencode` backend is the default (the `hydra` wrapper always passes `--profile opencode`).
+
 ## 5. Rules for Backend Scripts (`${AGENT_BACKEND}.sh`)
 
 Any script placed in `/agent/backends/` must adhere to the following rules:
@@ -78,4 +91,13 @@ exec opencode serve --hostname 0.0.0.0 --port 4096
 
 ## 7. Compliance
 
-To verify that a new backend adheres to this contract, run the `hydra status` command. The container logs must show successful connection to `OPENAI_BASE_URL` and successful loading of configuration from `/configs/backends/${AGENT_BACKEND}/`. If the backend fails to start, the container must exit with a non-zero status.
+To verify that a new backend adheres to this contract:
+
+```bash
+./hydra restart
+./hydra logs agent
+```
+
+The container logs must show a successful connection to `OPENAI_BASE_URL` and successful loading of configuration from `/configs/backends/${AGENT_BACKEND}/`. If the backend fails to start, the container must exit with a non-zero status.
+
+Note: `./hydra status` only prints container state; it does not inspect logs.
