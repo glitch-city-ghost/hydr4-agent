@@ -1,4 +1,4 @@
-# System Contract
+# Host Contract
 
 **Version:** 2.0
 **Status:** Active
