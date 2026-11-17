@@ -34,3 +34,23 @@ The agent is an interchangeable container. Anything that satisfies this contract
 That is the whole contract. Configuration format, CLI flags, and log output are the backend's
 business. Other containers reach the agent as `hydr4-agent:4096` on `traefik-net` and
 `hydr4-agent-net`.
+
+## 3. Host access is a debug fallback
+
+The agent is served to the host by Traefik (`http://agent.localhost` → `hydr4-agent:4096` on
+`traefik-net`). That is the supported path.
+
+`compose/agents.yaml` also publishes the port on the host:
+
+```yaml
+ports:
+  - "127.0.0.1:4096:4096"
+```
+
+This loopback binding is a **debug fallback only**. It exists so that the stack can be reached
+directly at `http://127.0.0.1:4096` when Traefik is down, misconfigured, or not started, and it is
+used by the check scripts. It is not part of the contract, it is not exposed to the network, and
+no backend may depend on it.
+
+It is expected to be removed once container-to-container access through Traefik is the only
+supported path. See `docs/ROADMAP.md` (last item, lowest priority).

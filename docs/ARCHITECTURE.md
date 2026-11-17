@@ -40,8 +40,8 @@ agent: http://gateway:3001/v1   (OpenAI-compatible /chat/completions, /models)
 
 Two independent paths exist:
 
-- `http://agent.localhost` / `http://api.localhost` — through Traefik.
-- `127.0.0.1:4096` / `127.0.0.1:3001` — direct port bindings. Needed because Traefik cannot discover the containers itself (see Traefik -> containers below) and because container healthchecks are local.
+- `http://agent.localhost` / `http://api.localhost` — through Traefik. **This is the supported path.**
+- `127.0.0.1:4096` / `127.0.0.1:3001` — direct port bindings. **Debug fallback only**: for the check scripts, and for reaching a container by hand when Traefik is down or misconfigured. Not part of the contract, bound to loopback so not reachable from the LAN. Marked for removal once container-to-container access through Traefik is the only supported path (see `docs/ROADMAP.md`, last item).
 
 ### Gateway -> providers (egress)
 

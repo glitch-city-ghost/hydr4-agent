@@ -47,4 +47,20 @@ kept here for history.
   - Backend scripts read `HYDR4_AGENT_HTTP_PORT` instead of the literal (`--port "${HYDR4_AGENT_HTTP_PORT}"`).
   - The contract states `Serve on 0.0.0.0:${HYDR4_AGENT_HTTP_PORT}` instead of a literal port.
 - **Remaining:** the `traefik.*` label in `compose/agents.yaml` is inert, since the host runs Traefik with the file provider only (ADR-006). Changing the port therefore also means editing `l3rn4-nix/traefik-dynamic/routes.yaml` by hand.
-- **Depends on:** `docs/contracts/agent-seam.md` §2 and §1.
+- **Depends on:** `docs/contracts/agent-seam.md` §1.
+
+### 8. Remove host port publishing (lowest priority)
+- **Status:** Pending
+- **Priority:** Lowest. Do this last, only if it ever becomes a real concern.
+- **Context:** `compose/gateway.yaml` and `compose/agents.yaml` both publish their port on the host
+  loopback (`127.0.0.1:3001:3001`, `127.0.0.1:4096:4096`). Traefik does not need those bindings: it
+  reaches both containers by name inside `traefik-net` (`hydr4-gateway:3001`, `hydr4-agent:4096`).
+  The bindings exist purely as a debug fallback—for the check scripts and for reaching a container
+  by hand when Traefik is down—and are documented as such in `docs/contracts/agent-seam.md` §3 and
+  `docs/ARCHITECTURE.md`.
+- **Goal:** drop `ports:` from both services, so the only way in from the host is through Traefik.
+- **Friction to keep in mind:** this conflicts with the routine "the container is broken, just
+  `curl 127.0.0.1:4096`" debugging reflex. Losing it should be a deliberate decision, not a drive-by
+  cleanup.
+- **Depends on:** `scripts/check.sh` and `scripts/smoke-test.sh` reaching the services through
+  `docker compose exec` (or the internal service names) instead of `127.0.0.1`.
