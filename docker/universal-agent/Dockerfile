@@ -1,6 +1,6 @@
 FROM node:22-slim
 
-# Устанавливаем инструменты: Python, Git, утилиты
+# Install tools: Python, Git, and utilities
 RUN apt-get update && apt-get install -y --no-install-recommends \
     git \
     curl \
@@ -12,7 +12,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем ttyd (веб-терминал)
+# Install ttyd (web terminal)
 RUN ARCH="$(dpkg --print-architecture)" \
     && case "$ARCH" in \
          amd64) TTYD_ARCH="x86_64" ;; \
@@ -25,15 +25,15 @@ RUN ARCH="$(dpkg --print-architecture)" \
 # GitHub SSH host keys are supplied read-only at runtime via /home/agent/.ssh/known_hosts.
 # Do not ssh-keyscan at build time: that is TOFU and not reproducible.
 
-# Устанавливаем OpenCode и DeepSeek Harness (CLI)
+# Install OpenCode and DeepSeek Harness (CLI)
 RUN npm install -g @opencode/cli dsh
 
-# Создаем пользователя
+# Create the user
 RUN userdel -r node || true
 
 RUN useradd -u 1000 -U -m -s /bin/bash agent
 
-# Создаем директории конфига и SSH, даем права пользователю agent (для томов)
+# Create the config and SSH directories, and give the agent user ownership (for volumes)
 RUN mkdir -p /home/agent/.local/share/opencode /home/agent/.config /home/agent/.ssh \
     && chmod 700 /home/agent/.ssh \
     && chown -R agent:agent /home/agent
@@ -42,7 +42,7 @@ USER agent
 
 WORKDIR /workspace
 
-# Копируем скрипт запуска
+# Copy the entrypoint script
 
 COPY --chown=agent:agent entrypoint.sh /home/agent/entrypoint.sh
 RUN chmod +x /home/agent/entrypoint.sh
