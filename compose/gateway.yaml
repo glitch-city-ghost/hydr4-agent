@@ -3,7 +3,7 @@ services:
     image: ghcr.io/tashfeenahmed/freellmapi@sha256:da6829d4ae510b968aa8bea6817a3647f5396c312392bbf44f47942d0aec2d96
     container_name: hydr4-gateway
     ports:
-      - "127.0.0.1:3001:3001" # <--- Только локально
+      - "127.0.0.1:3001:3001" # <--- Localhost only
     env_file:
       # Gateway-specific public settings live in configs/gateway/freellmapi/.
       - ../.env

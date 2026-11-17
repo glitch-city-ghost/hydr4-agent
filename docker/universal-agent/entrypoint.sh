@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # --- Git Identity Setup ---
-# Используем путь в примонтированной папке .config, чтобы настройки сохранялись
+# Use a path inside the mounted .config folder so settings persist
 export GIT_CONFIG_GLOBAL="/home/agent/.config/.gitconfig"
 
 # Commits are authored by the dedicated bot account, not by a random hostname.
