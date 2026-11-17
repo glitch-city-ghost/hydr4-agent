@@ -115,21 +115,12 @@ exec opencode serve --hostname 0.0.0.0 --port 4096
 
 ## 6. Compliance
 
-To verify that a new backend adheres to this contract, run:
+A backend is compliant if the following holds, regardless of which agent binary is inside it:
 
-```bash
-./hydra restart
-./hydra logs agent
-```
+1. its script lives at `/agent/backends/${AGENT_BACKEND}.sh` in the image;
+2. that script ends with `exec <agent>` and the agent process becomes PID 1 of the container;
+3. it listens on port `4096` and answers `GET /global/health` on that port;
+4. the process exits non-zero when the agent exits non-zero.
 
-A passing backend:
-
-1. prints `Delegating to backend: <name>` in the logs;
-2. leaves `hydr4-agent` running and eventually `healthy` in `docker compose ps`;
-3. answers `http://127.0.0.1:4096/global/health` (the container healthcheck);
-4. is reachable as `http://agent.localhost` once `l3rn4-nix/traefik-dynamic/routes.yaml` points at
-   `hydr4-agent:4096`.
-
-If the backend fails to start, the container must exit with a non-zero status.
-
-Note: `./hydra status` only prints container state; it does not inspect logs.
+The contract says nothing about log contents. `docker compose ps`, the container healthcheck and
+Traefik all operate on the network facts above; a log line is not an interface.
