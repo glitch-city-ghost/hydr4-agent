@@ -88,7 +88,7 @@ See ADR-006.
 ## Components
 
 - **l3rn4-nix**: OS, Docker, mihomo, Traefik. Unaware of hydr4 internals.
-- **gateway**: OpenAI-compatible proxy, provider failover. Must adhere to `docs/contracts/model-gateway.md`.
+- **gateway**: OpenAI-compatible proxy, provider failover. Must adhere to `docs/contracts/gateway.md`.
 - **agent**: Interchangeable container. Must adhere to `docs/contracts/agent-seam.md`.
 
 ## Contracts

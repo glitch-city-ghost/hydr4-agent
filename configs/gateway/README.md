@@ -2,7 +2,7 @@
 
 The model gateway is an interchangeable component behind an OpenAI-compatible
 API. The agent and the containers only depend on the gateway contract in
-[`docs/contracts/model-gateway.md`](../../docs/contracts/model-gateway.md), not
+[`docs/contracts/gateway.md`](../../docs/contracts/gateway.md), not
 on a concrete implementation.
 
 Current implementation: **FreeLLMAPI**. Target implementation: **LiteLLM**

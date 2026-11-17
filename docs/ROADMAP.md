@@ -9,14 +9,14 @@ kept here for history.
 
 ### 1. Migrate Gateway to LiteLLM
 - **Status:** Pending
-- **Context:** FreeLLMAPI handles `429 Too Many Requests` poorly: it leaks them to the agent and does not parse `Retry-After`. See `contracts/model-gateway.md` §5.1.
+- **Context:** FreeLLMAPI handles `429 Too Many Requests` poorly: it leaks them to the agent and does not parse `Retry-After`.
 - **Goal:** Replace the FreeLLMAPI image with LiteLLM + Postgres. Keep the same service name, host port, and internal DNS name. Update `.env` and contracts accordingly.
 - **Constraint:** the agent-facing contract must not change: `http://gateway:3001/v1`, bearer `HYDRA_API_KEY`, same model IDs.
 
 ### 2. Implement Agent Seam (AGENT_BACKEND)
 - **Status:** Done.
 - **Context:** `docker/universal-agent/entrypoint.sh` dispatches to `/agent/backends/${AGENT_BACKEND}.sh`. The `opencode` and `dsh` backends are implemented.
-- **Remaining:** align `contracts/agent-seam.md` with the repository layout (`configs/backends/<name>/`, read-only at `/configs`).
+- **Contract:** `docs/contracts/agent-seam.md`.
 
 ### 3. Harden Agent Filesystem (`read_only: true`)
 - **Status:** Pending
