@@ -1,103 +1,135 @@
 # Agent Seam Contract
 
-**Version:** 1.0
+**Version:** 1.1
 **Status:** Active
 **Scope:** Defines the boundary between the container infrastructure and any AI agent backend (OpenCode, DSH, Aider, etc.).
 
 ## 1. Purpose
 
-This document defines the explicit contract for running an AI agent inside the `hydr4-agent` container. The goal is to make the agent backend **swappable**. Swapping the agent (e.g., from OpenCode to DSH) must not require editing the `Dockerfile`, `entrypoint.sh`, or `docker-compose.yml`. It should only require changing an environment variable and providing the respective configuration folder.
+This document defines the explicit contract for running an AI agent inside the `hydr4-agent` container. The goal is to make the agent backend **swappable**: swapping the agent (for example from OpenCode to DSH) must not require editing the `Dockerfile` or the entrypoint, only selecting a backend and its configuration folder.
 
 ## 2. The Seam
 
-The container image is built with a generic entrypoint. It does not know *which* agent it is running. The entrypoint evaluates the environment variable `AGENT_BACKEND` and executes the corresponding shell script. To run a non-default backend, the matching Compose profile must also be active (see §4.1).
+The image is built once and is backend-agnostic. Its entrypoint (`/home/agent/entrypoint.sh`) prepares Git, checks that `AGENT_BACKEND` is set, and then hands over to the matching script with `exec`:
 
-**Invocation:**
-The container will execute exactly this path:
 ```bash
 /agent/backends/${AGENT_BACKEND}.sh
 ```
 
-**Directory Structure:**
-The `Dockerfile` guarantees the existence of the `/agent/backends/` directory.
-- For OpenCode: `/agent/backends/opencode.sh`
-- For DSH: `/agent/backends/dsh.sh`
+A backend is therefore a **shell script** that ends in a server process (no daemonizing), plus the config that script loads.
+
+### 2.1 Input mapping
+
+| Backend | Script in the image | Script in the repo | Config it loads |
+|---|---|---|---|
+| `opencode` | `/agent/backends/opencode.sh` | `docker/universal-agent/backends/opencode.sh` | `/configs/backends/opencode/config.json` |
+| `dsh` | `/agent/backends/dsh.sh` | `docker/universal-agent/backends/dsh.sh` | none in the repo (see note) |
+
+- `/agent/backends/` is copied by the `Dockerfile`; the repo is the source of truth.
+- `/configs/` is `../configs` from the repository root, bind-mounted read-only by `compose/agents.yaml`.
+- The Compose file also carries `OPENCODE_CONFIG`. That variable is *OpenCode-specific*: it is a
+  single file path, not a backend-directory contract you can rely on. A backend reads whatever
+  its own script points at.
+
+Note on DSH: the backend script exists, but DSH's own settings file is not mounted or wired into
+the container today. There is no `/configs/backends/${AGENT_BACKEND}/` lookup in the code — any
+backend directory is only useful if its script is told to load it.
 
 ## 3. Environment Contract (Inputs)
 
-The container guarantees that the following environment variables are available to the backend script. The backend *must* use these variables to connect to the model gateway.
+`compose/agents.yaml` sets the following variables for every backend:
 
-| Variable | Required | Description |
-|---|---|---|
-| `AGENT_BACKEND` | Yes | Selects the script to run (e.g., `opencode`, `dsh`). |
-| `OPENAI_BASE_URL` | Yes | The base URL of the model gateway (e.g., `http://gateway:3001/v1`). |
-| `HYDRA_API_KEY` | Yes | The bearer token to authenticate with the model gateway. |
-| `GIT_CONFIG_GLOBAL` | Yes | Path to the isolated git config file (e.g., `/home/agent/.config/.gitconfig`). |
+| Variable | Source | Required | Description |
+|---|---|---|---|
+| `AGENT_BACKEND` | `.env` | Yes | Selects the script to run (e.g., `opencode`, `dsh`). |
+| `OPENAI_BASE_URL` | compose | Yes | The base URL of the model gateway (e.g., `http://gateway:3001/v1`). |
+| `HYDRA_API_KEY` | compose | Yes | The bearer token to authenticate with the model gateway. |
+| `OPENCODE_PASSWORD` | `.env` | Only for `opencode` | Password for the OpenCode Web UI. |
+| `OPENCODE_CONFIG` | compose | Only for `opencode` | Path to OpenCode's config file. |
+| `GIT_CONFIG_GLOBAL` | compose | Yes | Path to the isolated git config file (e.g., `/home/agent/.config/.gitconfig`). |
 
-*(Note: The backend may map `HYDRA_API_KEY` to standard variables like `OPENAI_API_KEY` internally, but the container guarantees `HYDRA_API_KEY`).*
+*(Note: the backend may map `HYDRA_API_KEY` to standard variables like `OPENAI_API_KEY` internally, but the container guarantees `HYDRA_API_KEY`).*
 
-The entrypoint configures Git for SSH authentication: it sets `GIT_SSH_COMMAND` to use `/home/agent/.ssh/id_ed25519`, sets `GIT_TERMINAL_PROMPT=0`, removes any legacy `credential.helper`, and adds `/workspace` as a safe Git directory.
+### 3.1 Git configuration done by the entrypoint
 
-## 4. Filesystem Contract (Mounts)
+Before delegating, the entrypoint prepares Git for the agent:
 
-The backend must expect the following directories to be mounted and writable/readable:
+- sets `GIT_CONFIG_GLOBAL` to `/home/agent/.config/.gitconfig`;
+- sets the committer identity (`user.name`/`user.email`), defaulting to `hydr4-agent` unless `GIT_USER_NAME` / `GIT_USER_EMAIL` override it;
+- removes any legacy `credential.helper`;
+- sets `GIT_TERMINAL_PROMPT=0`, so Git never prompts;
+- if `/home/agent/.ssh/id_ed25519` exists, sets `GIT_SSH_COMMAND` to that key with `known_hosts` and strict host-key checking;
+- adds `/workspace` to `safe.directory`.
 
-| Path | Access | Purpose |
-|---|---|---|
-| `/workspace` | Read/Write | The code repository the agent is working on. |
-| `/configs/backends/${AGENT_BACKEND}/` | Read-Only | Backend-specific configuration files (e.g., OpenCode's `config.json`). |
-| `/configs/agent/` | Read-Only | Generic agent configuration (shared across all backends). |
-| `/home/agent/.ssh/` | Read-Only | Dedicated bot SSH key (`id_ed25519`), `known_hosts`, and optional SSH config for Git access. |
+### 3.2 Configuring DSH
 
-### 4.1 Compose profiles
+The DSH backend script is two lines: export `OPENAI_API_KEY` from `HYDRA_API_KEY`, then `exec dsh web ... 4096`. The agent must still configure DSH to point at the gateway, exactly like the OpenCode example:
 
-`compose/agents.yaml` declares `profiles: ["dsh", "opencode"]`. Compose starts the `agent` service
-only when one of those profiles is active **and** `AGENT_BACKEND` names the matching backend.
-Both must agree:
-
-```bash
-AGENT_BACKEND=dsh docker compose --profile dsh up -d
+```yaml
+llm-pi-ai:
+  providers:
+    hydra:
+      api: openai-completions
+      baseURL: http://gateway:3001/v1
+      apiKeyEnv: OPENAI_API_KEY
 ```
 
-A backend that is requested via `AGENT_BACKEND` but whose profile is not active will never run.
-The `opencode` backend is the default (the `hydra` wrapper always passes `--profile opencode`).
+`apiKeyEnv` names the environment variable that holds the key, so the backend must export it
+before `dsh` starts. The file is not mounted yet; this block is the reference to copy when it is.
 
-## 5. Rules for Backend Scripts (`${AGENT_BACKEND}.sh`)
+### 3.3 Minimal rules for backend scripts (`${AGENT_BACKEND}.sh`)
 
-Any script placed in `/agent/backends/` must adhere to the following rules:
+Any script placed in `/agent/backends/` must:
 
-1. **Do not daemonize.** Use `exec` to replace the shell process. The container's lifecycle is tied to this process.
-2. **Do not hardcode ports or URLs.** Read them from the environment variables defined above.
-3. **Do not write to global system configs.** Respect `GIT_CONFIG_GLOBAL`. All agent-specific configuration must be loaded from `/configs/backends/${AGENT_BACKEND}/`.
-4. **Exit with the agent's exit code.** If the agent crashes, the script must exit with a non-zero code so the container runtime can restart it (or fail).
+1. **Not daemonize.** Use `exec` for the last command so the container's lifecycle stays tied to the agent process.
+2. **Not hardcode the gateway URL.** Read it from `OPENAI_BASE_URL` / `HYDRA_API_KEY` (or map those to whatever the tool expects).
+3. **Not write to global system configs.** Respect `GIT_CONFIG_GLOBAL`.
+4. **Propagate the exit code.** If the agent crashes, the container must exit non-zero so the runtime can restart it or fail visibly.
 
-## 6. Example (OpenCode)
+## 4. Running a backend
 
-If `AGENT_BACKEND=opencode`, the container executes `/agent/backends/opencode.sh`. The content of this script is:
+`compose/agents.yaml` declares `profiles: ["dsh", "opencode"]`, so the `agent` service starts only
+when one of them is selected on the Compose command line. They are **not** tied to the
+`AGENT_BACKEND` value, and nothing in the image reads them.
+
+- The repository wrapper `hydra` always passes `--profile opencode`.
+- `AGENT_BACKEND` is passed to the container as an environment variable (`${AGENT_BACKEND:-opencode}`).
+  It selects the *script*, not the profile.
+- DSH therefore needs both: its profile selected, and `AGENT_BACKEND=dsh`. That is a manual path today:
+  `AGENT_BACKEND=dsh docker compose --profile dsh up -d`. `hydra` does not offer it.
+
+## 5. Reference implementation: `opencode.sh`
+
+The repository script, for reference:
 
 ```bash
 #!/bin/bash
-set -e
-
-# Point OpenCode to the mounted config
 export OPENCODE_CONFIG=/configs/backends/opencode/config.json
-
-# Map the gateway key to what OpenCode expects (if necessary)
 export OPENAI_API_KEY="${HYDRA_API_KEY}"
-
-# Start the server
+# The built-in DeepSeek provider activates from DEEPSEEK_API_KEY.
+# Route it through the gateway just like the other OpenAI-compatible providers.
+export DEEPSEEK_API_KEY="${HYDRA_API_KEY}"
+echo "🚀 Starting OpenCode Web Server..."
 exec opencode serve --hostname 0.0.0.0 --port 4096
 ```
 
-## 7. Compliance
+## 6. Compliance
 
-To verify that a new backend adheres to this contract:
+To verify that a new backend adheres to this contract, run:
 
 ```bash
 ./hydra restart
 ./hydra logs agent
 ```
 
-The container logs must show a successful connection to `OPENAI_BASE_URL` and successful loading of configuration from `/configs/backends/${AGENT_BACKEND}/`. If the backend fails to start, the container must exit with a non-zero status.
+A passing backend:
+
+1. prints `Delegating to backend: <name>` in the logs;
+2. leaves `hydr4-agent` running and eventually `healthy` in `docker compose ps`;
+3. answers `http://127.0.0.1:4096/global/health` (the container healthcheck);
+4. is reachable as `http://agent.localhost` once `l3rn4-nix/traefik-dynamic/routes.yaml` points at
+   `hydr4-agent:4096`.
+
+If the backend fails to start, the container must exit with a non-zero status.
 
 Note: `./hydra status` only prints container state; it does not inspect logs.
