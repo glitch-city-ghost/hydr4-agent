@@ -1,6 +1,6 @@
 # hydr4-agent Roadmap & Deferred Work
 
-Этот файл фиксирует архитектурные улучшения, которые мы осознанно отложили.
+This file tracks the architectural improvements we have deliberately deferred.
 
 ## 🚀 Upcoming & Deferred Work
 
