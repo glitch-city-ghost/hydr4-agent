@@ -15,12 +15,24 @@ git config --global --unset-all credential.helper 2>/dev/null || true
 # Git never prompts interactively inside the container.
 export GIT_TERMINAL_PROMPT=0
 
-# --- GitHub SSH Setup ---
-if [ -r "/home/agent/.ssh/id_ed25519" ]; then
-    export GIT_SSH_COMMAND="ssh -i /home/agent/.ssh/id_ed25519 -o IdentitiesOnly=yes -o UserKnownHostsFile=/home/agent/.ssh/known_hosts -o StrictHostKeyChecking=yes"
-    echo "🔐 Git SSH configured for the bot account"
+# --- Git SSH Setup ---
+# Identity selection belongs to ~/.ssh/config: Host aliases can point different
+# repositories at different keys. Only enforce host-key verification here.
+# If the config is missing or unparsable, fall back to the legacy single key.
+SSH_DIR="/home/agent/.ssh"
+SSH_CONFIG="$SSH_DIR/config"
+SSH_KEY="$SSH_DIR/id_ed25519"
+KNOWN_HOSTS="$SSH_DIR/known_hosts"
+
+if [ -r "$SSH_CONFIG" ] && ssh -G -F "$SSH_CONFIG" github.com >/dev/null 2>&1; then
+    export GIT_SSH_COMMAND="ssh -F $SSH_CONFIG -o UserKnownHostsFile=$KNOWN_HOSTS -o StrictHostKeyChecking=yes"
+    echo "🔐 Git SSH configured from $SSH_CONFIG"
+elif [ -r "$SSH_KEY" ]; then
+    export GIT_SSH_COMMAND="ssh -F /dev/null -i $SSH_KEY -o IdentitiesOnly=yes -o UserKnownHostsFile=$KNOWN_HOSTS -o StrictHostKeyChecking=yes"
+    echo "⚠️  SSH config missing or invalid; using fallback key $SSH_KEY"
 else
-    echo "⚠️  No SSH key at /home/agent/.ssh/id_ed25519; Git over SSH will not work"
+    unset GIT_SSH_COMMAND
+    echo "⚠️  No usable SSH config or key; Git over SSH will not work"
 fi
 
 # The workspace is bind-mounted and may be owned by a different UID.
