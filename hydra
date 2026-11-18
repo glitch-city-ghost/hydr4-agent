@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
-# Hydra CLI — тонкая и прозрачная обвязка над Docker Compose.
-# Она управляет контейнерами. Она не трогает Git, данные и скрытое состояние.
+# Hydra CLI — a thin, transparent wrapper around Docker Compose.
+# It manages containers. It does not touch Git, data, or hidden state.
 #
-# Авария? Читай WTF_EVERYTHING_BROKE_DOWN_HELP.md
+# Something broke? Read WTF_EVERYTHING_BROKE_DOWN_HELP.md
 
 set -euo pipefail
 
@@ -13,7 +13,7 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Загружаем переменные из .env
+# Load variables from .env
 if [ -f .env ]; then
     set -a
     # shellcheck disable=SC1091
@@ -26,60 +26,60 @@ WAIT_TIMEOUT=180
 
 usage() {
     cat <<'EOF'
-Hydra CLI — тонкая обвязка над Docker Compose.
+Hydra CLI — a thin wrapper around Docker Compose.
 
-Использование: ./hydra <команда> [аргументы]
+Usage: ./hydra <command> [args]
 
-  start      Поднять стек и дождаться healthcheck'ов
-  stop       Остановить стек
-  restart    Пересоздать контейнеры без пересборки (подхватить configs/)
-  rebuild    Пересобрать образы с нуля и пересоздать контейнеры
-  status     Показать контейнеры, текущий коммит и состояние рабочего дерева
-  logs [svc] Смотреть логи (по умолчанию все сервисы)
-  check      Поверхностная проверка без записи (без вызовов моделей и токенов)
-  web        Показать URL Agent UI
-  cli        Открыть shell внутри контейнера агента
+  start      Start the stack and wait for healthchecks
+  stop       Stop the stack
+  restart    Recreate containers without rebuilding (picks up configs/)
+  rebuild    Rebuild images from scratch, then recreate containers
+  status     Show containers, current commit, and working tree state
+  logs [svc] Follow logs (all services by default)
+  check      Shallow, read-only health check (no model calls, no tokens)
+  web        Print the Agent UI URL
+  cli        Open a shell inside the agent container
 
-Авария: WTF_EVERYTHING_BROKE_DOWN_HELP.md
+Something broke? WTF_EVERYTHING_BROKE_DOWN_HELP.md
 EOF
 }
 
 case "${1:-}" in
     start)
-        echo -e "${YELLOW}Запуск Hydra (Gateway + Agent)...${NC}"
+        echo -e "${YELLOW}Starting Hydra (Gateway + Agent)...${NC}"
         "${COMPOSE[@]}" up -d --wait --wait-timeout "$WAIT_TIMEOUT" --remove-orphans
 
-        echo -e "${GREEN}Готово.${NC}"
+        echo -e "${GREEN}Done.${NC}"
         echo -e "• Agent UI:   http://agent.localhost"
         echo -e "• Gateway UI: http://api.localhost"
-        echo -e "Запусти ${GREEN}./hydra check${NC}, чтобы проверить очевидное."
+        echo -e "Run ${GREEN}./hydra check${NC} to verify the obvious stuff."
         ;;
     stop)
-        echo -e "${YELLOW}Остановка Hydra...${NC}"
+        echo -e "${YELLOW}Stopping Hydra...${NC}"
         "${COMPOSE[@]}" down --remove-orphans
         ;;
     restart)
-        echo -e "${YELLOW}Пересоздаём контейнеры (без пересборки)...${NC}"
+        echo -e "${YELLOW}Recreating containers (no rebuild)...${NC}"
         "${COMPOSE[@]}" up -d --force-recreate --wait --wait-timeout "$WAIT_TIMEOUT" --remove-orphans
-        echo -e "${GREEN}Готово.${NC}"
+        echo -e "${GREEN}Done.${NC}"
         ;;
     rebuild)
-        echo -e "${YELLOW}Пересборка с нуля (это может занять время)...${NC}"
+        echo -e "${YELLOW}Rebuilding from scratch (this can take a while)...${NC}"
         "${COMPOSE[@]}" build --pull --no-cache
         "${COMPOSE[@]}" pull --ignore-pull-failures gateway
         "${COMPOSE[@]}" up -d --force-recreate --wait --wait-timeout "$WAIT_TIMEOUT" --remove-orphans
-        echo -e "${GREEN}Готово.${NC}"
-        echo -e "Запусти ${GREEN}./hydra check${NC}, чтобы проверить очевидное."
+        echo -e "${GREEN}Done.${NC}"
+        echo -e "Run ${GREEN}./hydra check${NC} to verify the obvious stuff."
         ;;
     status)
         "${COMPOSE[@]}" ps --all
         echo
-        printf 'Коммит:       '
+        printf 'Commit:       '
         git log -1 --oneline
         if [ -n "$(git status --porcelain)" ]; then
-            echo "Дерево:       грязное (есть незакоммиченные изменения)"
+            echo "Working tree: dirty (uncommitted changes)"
         else
-            echo "Дерево:       чистое"
+            echo "Working tree: clean"
         fi
         ;;
     logs)
@@ -90,17 +90,17 @@ case "${1:-}" in
         exec bash scripts/check.sh
         ;;
     web)
-        echo -e "Открой в браузере: ${GREEN}http://localhost:4096${NC}"
+        echo -e "Open in browser: ${GREEN}http://localhost:4096${NC}"
         ;;
     cli)
-        echo -e "${YELLOW}Открытие терминала внутри агента...${NC}"
+        echo -e "${YELLOW}Opening a shell inside the agent...${NC}"
         "${COMPOSE[@]}" exec agent bash
         ;;
     help|--help|-h|"")
         usage
         ;;
     *)
-        echo "Неизвестная команда: $1" >&2
+        echo "Unknown command: $1" >&2
         echo
         usage
         exit 1

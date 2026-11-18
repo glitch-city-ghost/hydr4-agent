@@ -5,38 +5,38 @@ RED='\033[0;31m'
 YELLOW='\033[1;33m'
 NC='\033[0m'
 
-# Загружаем ключ из .env
+# Load the key from .env
 if [ -f .env ]; then
     export $(grep -v '^#' .env | xargs)
 else
-    echo -e "${RED}Ошибка: .env файл не найден!${NC}"
+    echo -e "${RED}Error: .env file not found!${NC}"
     exit 1
 fi
 
 if [ -z "$FREELMAPI_UNIFIED_KEY" ]; then
-    echo -e "${RED}Ошибка: FREELMAPI_UNIFIED_KEY не задан в .env!${NC}"
+    echo -e "${RED}Error: FREELMAPI_UNIFIED_KEY is not set in .env!${NC}"
     exit 1
 fi
 
-echo -e "${YELLOW}=== Запуск Smoke-тестов для hydr4-agent ===${NC}\n"
+echo -e "${YELLOW}=== Running smoke tests for hydr4-agent ===${NC}\n"
 
-# 0. Узнаем у FreeLLMAPI, какая модель сейчас активна
-echo -n "0. Запрос списка моделей у FreeLLMAPI... "
+# 0. Ask FreeLLMAPI which model is currently active
+echo -n "0. Fetching the model list from FreeLLMAPI... "
 MODELS_JSON=$(curl -s -H "Authorization: Bearer $FREELMAPI_UNIFIED_KEY" http://127.0.0.1:3001/v1/models)
 
-# Вытаскиваем ID первой модели из JSON (ищем паттерн "id":"...")
+# Extract the first model ID from the JSON (looking for the "id":"..." pattern)
 ACTIVE_MODEL=$(echo "$MODELS_JSON" | grep -o '"id":"[^"]*"' | head -1 | cut -d'"' -f4)
 
 if [ -z "$ACTIVE_MODEL" ]; then
-    echo -e "${RED}ОШИБКА (не удалось получить модель. Проверь ключи в дашборде)${NC}"
-    # Если моделей нет, используем 'auto' как запасной вариант
+    echo -e "${RED}ERROR (could not get a model. Check the keys in the dashboard)${NC}"
+    # If there are no models, use 'auto' as a fallback
     ACTIVE_MODEL="auto"
-    echo -e "${YELLOW}Используем fallback: $ACTIVE_MODEL${NC}"
+    echo -e "${YELLOW}Using fallback: $ACTIVE_MODEL${NC}"
 else
-    echo -e "${GREEN}OK (Активная модель: $ACTIVE_MODEL)${NC}"
+    echo -e "${GREEN}OK (active model: $ACTIVE_MODEL)${NC}"
 fi
 
-# Формируем JSON-пейлоад с динамической моделью
+# Build the JSON payload with the dynamic model
 JSON_PAYLOAD=$(cat <<EOF
 {
   "model": "${ACTIVE_MODEL}",
@@ -57,46 +57,50 @@ JSON_PAYLOAD=$(cat <<EOF
 EOF
 )
 
-# 1. Проверка прокси mihomo
-echo -n "1. Проверка прокси mihomo из контейнера... "
-PROXY_IP=$(docker compose exec -T gateway node -e "
+# 1. Check the mihomo proxy
+echo -n "1. Checking the mihomo proxy from inside the container... "
+if [ -z "${UPSTREAM_PROXY:-}" ]; then
+    echo -e "${RED}ERROR (UPSTREAM_PROXY is not set in .env)${NC}"
+else
+    PROXY_IP=$(docker compose exec -T -e UPSTREAM_PROXY="$UPSTREAM_PROXY" gateway node -e "
 const { request, ProxyAgent } = require('undici');
-const proxyAgent = new ProxyAgent('http://172.17.0.1:7890');
+const proxyAgent = new ProxyAgent(process.env.UPSTREAM_PROXY);
 request('https://api.ipify.org', { dispatcher: proxyAgent })
   .then(r => r.body.text()).then(ip => console.log(ip)).catch(() => console.log('FAIL'));
 " 2>/dev/null | tr -d '\r\n')
 
-if [ "$PROXY_IP" != "FAIL" ] && [ -n "$PROXY_IP" ]; then
-    echo -e "${GREEN}OK (IP: $PROXY_IP)${NC}"
-else
-    echo -e "${RED}ОШИБКА (не удалось получить IP через прокси)${NC}"
+    if [ "$PROXY_IP" != "FAIL" ] && [ -n "$PROXY_IP" ]; then
+        echo -e "${GREEN}OK (IP: $PROXY_IP)${NC}"
+    else
+        echo -e "${RED}ERROR (could not get an IP through $UPSTREAM_PROXY)${NC}"
+    fi
 fi
 
-# 2. Проверка доступности API
-echo -n "2. Проверка API FreeLLMAPI из WSL... "
+# 2. Check API availability
+echo -n "2. Checking the FreeLLMAPI API from WSL... "
 HEALTH=$(curl -s -o /dev/null -w "%{http_code}" http://127.0.0.1:3001/healthz)
 if [ "$HEALTH" = "200" ]; then
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "${RED}ОШИБКА (HTTP $HEALTH)${NC}"
+    echo -e "${RED}ERROR (HTTP $HEALTH)${NC}"
 fi
 
-# 3. Проверка Tool Calling из WSL
-echo -n "3. Проверка Tool Calling из WSL (POST)... "
+# 3. Check tool calling from WSL
+echo -n "3. Checking tool calling from WSL (POST)... "
 RESPONSE=$(curl -s --max-time 20 http://127.0.0.1:3001/v1/chat/completions \
   -H "Authorization: Bearer $FREELMAPI_UNIFIED_KEY" \
   -H "Content-Type: application/json" \
   -d "$JSON_PAYLOAD")
 
 if echo "$RESPONSE" | grep -q '"tool_calls"'; then
-    echo -e "${GREEN}OK (Tool Calls работают)${NC}"
+    echo -e "${GREEN}OK (tool calls work)${NC}"
 else
-    echo -e "${RED}ОШИБКА (Tool Calls не найдены)${NC}"
-    echo -e "${YELLOW}Ответ сервера: $RESPONSE${NC}"
+    echo -e "${RED}ERROR (tool calls not found)${NC}"
+    echo -e "${YELLOW}Server response: $RESPONSE${NC}"
 fi
 
-# 4. Проверка Tool Calling изнутри Docker
-echo -n "4. Проверка Tool Calling изнутри Docker... "
+# 4. Check tool calling from inside Docker
+echo -n "4. Checking tool calling from inside Docker... "
 DOCKER_RESPONSE=$(docker compose exec -T gateway node -e "
 fetch('http://127.0.0.1:3001/v1/chat/completions', {
   method: 'POST',
@@ -108,6 +112,6 @@ fetch('http://127.0.0.1:3001/v1/chat/completions', {
 if echo "$DOCKER_RESPONSE" | grep -q '"tool_calls"'; then
     echo -e "${GREEN}OK${NC}"
 else
-    echo -e "${RED}ОШИБКА${NC}"
-    echo -e "${YELLOW}Ответ из Docker: $DOCKER_RESPONSE${NC}"
+    echo -e "${RED}ERROR${NC}"
+    echo -e "${YELLOW}Response from Docker: $DOCKER_RESPONSE${NC}"
 fi

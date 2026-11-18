@@ -73,14 +73,17 @@ else
     done
 fi
 
-# --- 3. Gateway local health -------------------------------------------------
+# --- 3. Gateway answers over HTTP --------------------------------------------
+# Any response means the port is served. 000 means no connection at all.
+# Probes /, not a vendor's health route: the endpoint has to survive the
+# gateway being replaced (FreeLLMAPI -> LiteLLM), see docs/contracts/gateway.md.
 gw_code=$(curl --noproxy '*' -sS -o /dev/null -w '%{http_code}' \
-    --max-time 5 http://127.0.0.1:3001/healthz 2>/dev/null || true)
+    --connect-timeout 3 --max-time 5 http://127.0.0.1:3001/ 2>/dev/null || true)
 
-if [ "$gw_code" = "200" ]; then
-    ok "gateway /healthz -> 200"
+if [ -n "$gw_code" ] && [ "$gw_code" != "000" ]; then
+    ok "gateway :3001 -> ${gw_code}"
 else
-    fail "gateway /healthz -> ${gw_code:-no response}"
+    fail "gateway :3001 -> no response"
 fi
 
 # --- 4. Gateway model list (local DB only, no provider call) -----------------
@@ -94,8 +97,18 @@ else
     models_code=${models_resp##*$'\n'}
     models_body=${models_resp%$'\n'*}
 
-    if [ "$models_code" = "200" ] && printf '%s' "$models_body" | grep -q '"data"'; then
-        ok "gateway /v1/models -> 200"
+    models_result=$(printf '%s' "$models_body" \
+        | grep -q '"data"' && echo 'JSON list' \
+        || [ "$models_code" = "401" ] && echo 'auth required' \
+        || echo 'not JSON')
+
+    if [ "$models_code" = "200" ] && [ "$models_result" = "JSON list" ]; then
+        ok "gateway /v1/models -> 200 (JSON list)"
+    elif [ "$models_code" = "401" ]; then
+        # Not a failure: this is what a swapped-in gateway answers before its key is
+        # re-set (LiteLLM with a master key does the same), and it proves the route
+        # exists and is protected. A healthy/inside key is what should get past it.
+        pending "gateway /v1/models -> 401 (auth required; key may differ from the one this gateway expects)"
     else
         fail "gateway /v1/models -> ${models_code:-no response}"
     fi

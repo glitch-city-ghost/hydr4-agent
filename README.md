@@ -13,6 +13,8 @@
 
 > 🚨 **Everything broke down?** Open [`WTF_EVERYTHING_BROKE_DOWN_HELP.md`](WTF_EVERYTHING_BROKE_DOWN_HELP.md). Do not delete `~/hydr4-data`.
 
+---
+
 ```text
            (\,;'\,;/)         _   _ __   __ ____  ____      _    
             \       /        | | | |\ \ / /|  _ \|  _ \    / \   
@@ -40,8 +42,8 @@ We don't take "Service Unavailable" for an answer. We route around it.
 
 ### 🛡️ The Three Pillars of the Hydra
 
-1. **The Head (Agent):** `OpenCode` running in a Web UI. It's smart, it's fast, and it's completely blind to your host system. It only sees `/workspace`. 
-2. **The Neck (Gateway):** `FreeLLMAPI`. A local OpenAI-compatible proxy. It takes your requests, masks your keys, rotates them on `429 Too Many Requests`, and talks to the outside world so your agent doesn't have to.
+1. **The Head (Agent):** `OpenCode` running in a Web UI. It's smart, it's fast, and it's completely blind to your host system. It only sees `/workspace`.
+2. **The Neck (Gateway):** `FreeLLMAPI` today, `LiteLLM` later. A local OpenAI-compatible proxy. It takes your requests, masks your keys, and talks to the outside world so your agent doesn't have to.
 3. **The Arsenal (Models):** We don't settle for small models. We run **NVIDIA Nemotron Ultra 550B** (a beast with a 1M context window), **DeepSeek V4 Flash**, and **Gemini 3.5 Flash Lite** — all routed through one unified endpoint.
 
 ---
@@ -69,8 +71,8 @@ graph LR
 *   `compose/` — Modular Docker Compose fragments (`gateway`, `agents`, `network`).
 *   `configs/` — Agent backend configs and gateway-specific settings (mounted read-only where needed).
 *   `docker/` — The Universal Agent Dockerfile. One image to rule them all.
-*   `docs/` — Contracts, ADRs (like why we still use `172.17.0.1`), and the **AI Code Review**.
-*   `workspace/` — The only folder the agent can touch. Keep it clean.
+*   `docs/` — Contracts and ADRs (like why the egress proxy address is host-specific).
+*   `workspace/` — **Not** in this repo. The agent's workspace is the sibling directory mounted at `/workspace` (`../../workspace` relative to `compose/`). Keep it clean.
 *   `hydra` — The CLI script. Thin wrapper for `start`, `stop`, `restart`, `rebuild`, `status`, `logs`, `check`, and `cli`.
 *   `WTF_EVERYTHING_BROKE_DOWN_HELP.md` — Open this when everything is on fire. Do not panic. Do not delete `~/hydr4-data`.
 
@@ -121,4 +123,3 @@ We are paranoid, and we are proud of it.
 *Part of the `l3rn4-nix` ecosystem.*
 
 </div>
-```
