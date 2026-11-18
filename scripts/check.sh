@@ -97,14 +97,9 @@ else
     models_code=${models_resp##*$'\n'}
     models_body=${models_resp%$'\n'*}
 
-    models_result=$(printf '%s' "$models_body" \
-        | grep -q '"data"' && echo 'JSON list' \
-        || [ "$models_code" = "401" ] && echo 'auth required' \
-        || echo 'not JSON')
-
-    if [ "$models_code" = "200" ] && [ "$models_result" = "JSON list" ]; then
+    if [[ "$models_code" == "200" && "$models_body" == *'"data"'* ]]; then
         ok "gateway /v1/models -> 200 (JSON list)"
-    elif [ "$models_code" = "401" ]; then
+    elif [[ "$models_code" == "401" ]]; then
         # Not a failure: this is what a swapped-in gateway answers before its key is
         # re-set (LiteLLM with a master key does the same), and it proves the route
         # exists and is protected. A healthy/inside key is what should get past it.
