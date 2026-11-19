@@ -1,6 +1,9 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "hydr4/nemotron-3-ultra-550b",
+  "model": "deepseek/deepseek-flash",
+  "experimental": {
+    "todo": true
+  },
   "providers": {
     "hydr4": {
       "name": "Hydra Gateway",
