@@ -104,6 +104,27 @@ Open your browser:
 
 ---
 
+## 🧠 Agent Configuration
+
+OpenCode talks to exactly one provider, the `hydr4` gateway. The model picker
+is limited to models the gateway actually serves; direct OpenAI/DeepSeek
+providers are disabled. The default profile uses DeepSeek V4 Flash for building
+and planning, Nemotron 3 Ultra 550B for independent review, and Fusion for a
+deliberate second opinion.
+
+Useful commands inside the agent:
+
+*   `/review` — read-only review of the current changes.
+*   `/review-fast` — same, on the faster DeepSeek path.
+*   `/verify` — run focused checks and report exact evidence.
+*   `/oracle` — independent architecture/risk second opinion.
+*   `/handoff` — compact summary for continuing later.
+
+The full model roster, agent roles, permissions, and update procedure are in
+[`configs/backends/opencode/README.md`](configs/backends/opencode/README.md).
+
+---
+
 ## 🔒 Zero-Trust Security Model
 
 We are paranoid, and we are proud of it.

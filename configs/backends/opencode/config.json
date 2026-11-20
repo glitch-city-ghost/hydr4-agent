@@ -1,9 +1,16 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "deepseek/deepseek-flash",
+  "model": "hydr4/deepseek-flash",
+  "default_agent": "build",
+  "shell": "/bin/bash",
   "experimental": {
-    "todo": true
+    "todo": true,
+    "subagent_depth": 2
   },
+  "policies": [
+    { "action": "provider.use", "resource": "*", "effect": "deny" },
+    { "action": "provider.use", "resource": "hydr4", "effect": "allow" }
+  ],
   "providers": {
     "hydr4": {
       "name": "Hydra Gateway",
@@ -11,28 +18,311 @@
       "package": "@opencode/ai/providers/openai-compatible",
       "settings": {
         "baseURL": "http://gateway:3001/v1",
-        "timeout": 2400000,
-        "headerTimeout": 2400000,
-        "chunkTimeout": 2400000
+        "apiKey": "{env:HYDRA_API_KEY}",
+        "encoding": "none",
+        "timeout": 1800000,
+        "headerTimeout": 600000,
+        "chunkTimeout": 300000
+      },
+      "compatibility": {
+        "maxTokensField": "max_tokens"
       },
       "models": {
-        "nemotron-3-ultra-550b": {
-          "name": "NVIDIA Nemotron 550B",
+        "deepseek-flash": {
+          "name": "DeepSeek V4 Flash",
           "capabilities": {
-            "tools": true
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"],
+            "reasoning": {
+              "supported": true,
+              "effort": ["low", "medium", "high"]
+            }
+          },
+          "compatibility": {
+            "reasoningField": "reasoning_content",
+            "requireReasoning": true,
+            "maxTokensField": "max_tokens"
+          },
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          },
+          "settings": {
+            "reasoningEffort": "medium"
+          }
+        },
+        "nemotron-3-ultra-550b": {
+          "name": "Nemotron 3 Ultra 550B",
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"],
+            "reasoning": {
+              "supported": true
+            }
+          },
+          "compatibility": {
+            "reasoningField": "reasoning_content",
+            "requireReasoning": false,
+            "maxTokensField": "max_tokens"
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 32768
+          }
+        },
+        "auto": {
+          "name": "Auto (gateway picks)",
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"],
+            "reasoning": {
+              "supported": true
+            }
+          },
+          "compatibility": {
+            "reasoningField": "reasoning_content",
+            "requireReasoning": false,
+            "maxTokensField": "max_tokens"
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 32768
+          }
+        },
+        "fusion": {
+          "name": "Fusion panel (slow, deep review)",
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"],
+            "reasoning": {
+              "supported": false
+            }
+          },
+          "compatibility": {
+            "maxTokensField": "max_tokens"
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 32768
           }
         }
       }
-    },
-    "deepseek": {
-      "env": ["HYDRA_API_KEY"],
-      "settings": {
-        "baseURL": "http://gateway:3001/v1",
-        "apiKey": "{env:HYDRA_API_KEY}",
-        "timeout": 2400000,
-        "headerTimeout": 2400000,
-        "chunkTimeout": 2400000
-      }
     }
-  }
+  },
+  "permissions": [
+    { "action": "read", "resource": "/configs/**", "effect": "ask" },
+    { "action": "read", "resource": "*.env", "effect": "deny" },
+    { "action": "read", "resource": "*.env.*", "effect": "deny" },
+    { "action": "read", "resource": "*.env.example", "effect": "allow" },
+    { "action": "read", "resource": "~/.ssh/**", "effect": "deny" },
+    { "action": "read", "resource": "**/id_ed25519", "effect": "deny" },
+    { "action": "external_directory", "resource": "*", "effect": "ask" },
+    { "action": "external_directory", "resource": "/tmp/opencode/*", "effect": "allow" },
+    { "action": "edit", "resource": ".git/**", "effect": "deny" },
+    { "action": "edit", "resource": "**/.git/**", "effect": "deny" },
+    { "action": "edit", "resource": "*.env", "effect": "deny" },
+    { "action": "edit", "resource": "*.env.*", "effect": "deny" },
+    { "action": "edit", "resource": "*.env.example", "effect": "allow" },
+    { "action": "edit", "resource": "/configs/**", "effect": "deny" },
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    { "action": "shell", "resource": "git push --force*", "effect": "deny" },
+    { "action": "shell", "resource": "git push -f*", "effect": "deny" },
+    { "action": "shell", "resource": "git push * --force*", "effect": "deny" },
+    { "action": "shell", "resource": "git push * -f*", "effect": "deny" },
+    { "action": "shell", "resource": "git reset --hard *", "effect": "ask" },
+    { "action": "shell", "resource": "git clean *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -fr *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf /*", "effect": "deny" },
+    { "action": "shell", "resource": "rm -fr /*", "effect": "deny" },
+    { "action": "shell", "resource": "rm -rf /tmp/opencode/*", "effect": "allow" },
+    { "action": "shell", "resource": "sudo *", "effect": "deny" },
+    { "action": "shell", "resource": "su *", "effect": "deny" },
+    { "action": "shell", "resource": "systemctl *", "effect": "deny" },
+    { "action": "shell", "resource": "chmod 777 *", "effect": "deny" },
+    { "action": "shell", "resource": "curl * | sh", "effect": "deny" },
+    { "action": "shell", "resource": "wget * | sh", "effect": "deny" },
+    { "action": "shell", "resource": "cat */.ssh/*", "effect": "deny" },
+    { "action": "shell", "resource": "cat ~/.ssh/*", "effect": "deny" },
+    { "action": "shell", "resource": "cat *.env", "effect": "deny" },
+    { "action": "shell", "resource": "cat *.env.*", "effect": "deny" },
+    { "action": "shell", "resource": "cat **/.env", "effect": "deny" },
+    { "action": "shell", "resource": "grep * .env", "effect": "deny" },
+    { "action": "shell", "resource": "rg * .env", "effect": "deny" },
+    { "action": "shell", "resource": "docker *", "effect": "ask" },
+    { "action": "subagent", "resource": "*", "effect": "deny" },
+    { "action": "subagent", "resource": "explore", "effect": "allow" },
+    { "action": "subagent", "resource": "reviewer", "effect": "allow" },
+    { "action": "subagent", "resource": "verifier", "effect": "allow" },
+    { "action": "subagent", "resource": "oracle", "effect": "allow" },
+    { "action": "webfetch", "resource": "*", "effect": "allow" },
+    { "action": "websearch", "resource": "*", "effect": "allow" },
+    { "action": "skill", "resource": "*", "effect": "allow" }
+  ],
+  "agents": {
+    "build": {
+      "model": "hydr4/deepseek-flash#high",
+      "steps": 80
+    },
+    "plan": {
+      "model": "hydr4/deepseek-flash#high",
+      "steps": 40,
+      "permissions": [
+        { "action": "shell", "resource": "*", "effect": "ask" },
+        { "action": "shell", "resource": "git status *", "effect": "allow" },
+        { "action": "shell", "resource": "git diff *", "effect": "allow" },
+        { "action": "shell", "resource": "git log *", "effect": "allow" },
+        { "action": "shell", "resource": "git show *", "effect": "allow" },
+        { "action": "shell", "resource": "git branch *", "effect": "allow" },
+        { "action": "shell", "resource": "rg *", "effect": "allow" },
+        { "action": "edit", "resource": "*.env.example", "effect": "deny" },
+        { "action": "subagent", "resource": "*", "effect": "deny" },
+        { "action": "subagent", "resource": "explore", "effect": "allow" },
+        { "action": "subagent", "resource": "oracle", "effect": "allow" }
+      ]
+    },
+    "general": {
+      "model": "hydr4/deepseek-flash#medium",
+      "steps": 40
+    },
+    "explore": {
+      "model": "hydr4/deepseek-flash#low",
+      "steps": 30
+    },
+    "reviewer": {
+      "description": "Read-only review of the current changes for correctness, security, regressions, and missing tests",
+      "mode": "subagent",
+      "model": "hydr4/nemotron-3-ultra-550b",
+      "steps": 24,
+      "system": "You are the reviewer subagent. Work read-only: never edit files, run destructive commands, or launch subagents. Read the task, the current diff, and the surrounding code. Check correctness, security, data loss, regressions, error handling, concurrency, and missing tests. Prefer concrete findings over style nits. If a finding depends on an assumption, state it. Output: (1) findings ordered P0 blocker, P1 should fix, P2 nice to have, each with path:line and a concrete fix; (2) verification gaps. If there are no actionable findings, say 'No blocking findings' and list residual risks.",
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "git diff *", "effect": "allow" },
+        { "action": "shell", "resource": "git status *", "effect": "allow" },
+        { "action": "shell", "resource": "git log *", "effect": "allow" },
+        { "action": "shell", "resource": "git show *", "effect": "allow" },
+        { "action": "subagent", "resource": "*", "effect": "deny" },
+        { "action": "question", "resource": "*", "effect": "deny" }
+      ]
+    },
+    "verifier": {
+      "description": "Runs the narrowest relevant checks and reports exact evidence without editing files",
+      "mode": "subagent",
+      "model": "hydr4/deepseek-flash#low",
+      "steps": 30,
+      "system": "You are the verifier subagent. Never edit files or launch subagents. Determine what changed, then run the narrowest checks that prove it works. Prefer static checks, project tests, and focused commands over broad suites. Report the exact commands and their results. If a check cannot run (for example Docker is unavailable inside this container), say so explicitly; never claim a check passed when it was not run. End with PASS, FAIL, or BLOCKED and the next action.",
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "*", "effect": "ask" },
+        { "action": "shell", "resource": "bash -n *", "effect": "allow" },
+        { "action": "shell", "resource": "sh -n *", "effect": "allow" },
+        { "action": "shell", "resource": "python3 -m json.tool *", "effect": "allow" },
+        { "action": "shell", "resource": "python3 -m py_compile *", "effect": "allow" },
+        { "action": "shell", "resource": "node --check *", "effect": "allow" },
+        { "action": "shell", "resource": "git diff *", "effect": "allow" },
+        { "action": "shell", "resource": "git status *", "effect": "allow" },
+        { "action": "shell", "resource": "git log *", "effect": "allow" },
+        { "action": "shell", "resource": "npm test *", "effect": "allow" },
+        { "action": "shell", "resource": "npm run *", "effect": "allow" },
+        { "action": "shell", "resource": "pnpm *", "effect": "allow" },
+        { "action": "shell", "resource": "bun test *", "effect": "allow" },
+        { "action": "shell", "resource": "pytest *", "effect": "allow" },
+        { "action": "shell", "resource": "go test *", "effect": "allow" },
+        { "action": "shell", "resource": "cargo test *", "effect": "allow" },
+        { "action": "subagent", "resource": "*", "effect": "deny" },
+        { "action": "question", "resource": "*", "effect": "deny" }
+      ]
+    },
+    "oracle": {
+      "description": "Independent second opinion from a different model family; read-only architecture and risk review",
+      "mode": "subagent",
+      "model": "hydr4/fusion",
+      "steps": 10,
+      "system": "You are an independent architect. Do not edit files or launch subagents. Analyse the decision or change described by the user. Read the relevant code, contracts, and docs first. List assumptions, options, trade-offs, risks, and a recommendation. Prefer simple, reversible changes and explicit failure modes over cleverness. Cite file paths. Do not restate the code; focus on what could go wrong and what you would do differently.",
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "*", "effect": "deny" },
+        { "action": "shell", "resource": "git diff *", "effect": "allow" },
+        { "action": "shell", "resource": "git status *", "effect": "allow" },
+        { "action": "subagent", "resource": "*", "effect": "deny" },
+        { "action": "question", "resource": "*", "effect": "deny" }
+      ]
+    },
+    "compaction": {
+      "model": "hydr4/deepseek-flash#low"
+    },
+    "title": {
+      "model": "hydr4/deepseek-flash#low"
+    },
+    "summary": {
+      "model": "hydr4/deepseek-flash#low"
+    }
+  },
+  "commands": {
+    "review": {
+      "description": "Review current changes without editing",
+      "agent": "reviewer",
+      "subagent": true,
+      "template": "Review the current uncommitted changes. Start with `git status --short`, `git diff`, and `git diff --cached`. Read the relevant files and contracts. Report only actionable findings, ordered P0 blocker / P1 should fix / P2 nice to have, each with path:line and a concrete fix. Do not edit files."
+    },
+    "review-fast": {
+      "description": "Review current changes with the fast model",
+      "agent": "reviewer",
+      "model": "hydr4/deepseek-flash#high",
+      "subagent": true,
+      "template": "Review the current uncommitted changes. Start with `git status --short`, `git diff`, and `git diff --cached`. Read the relevant files and contracts. Report only actionable findings, ordered P0 blocker / P1 should fix / P2 nice to have, each with path:line and a concrete fix. Do not edit files."
+    },
+    "verify": {
+      "description": "Run the narrowest relevant checks and report exact evidence",
+      "agent": "verifier",
+      "subagent": true,
+      "template": "Verify the current work. If the user supplied a target below, focus there; otherwise verify the uncommitted changes. Determine what changed, run the narrowest checks that prove it, and report exact commands and results. Do not edit files. If a check cannot run in this container, mark it BLOCKED and say what the user must run on the host."
+    },
+    "oracle": {
+      "description": "Independent panel review of a decision or change",
+      "agent": "oracle",
+      "subagent": true,
+      "template": "Give an independent second opinion on the decision or change below. Read the relevant code, contracts, and docs before answering. List assumptions, trade-offs, risks, and a concrete recommendation. Do not edit files."
+    },
+    "handoff": {
+      "description": "Write a concise handoff summary for the current work",
+      "agent": "build",
+      "template": "Write a handoff summary for the current work without editing files. Include: goal, decisions made, files changed, verification actually run, open questions, and the next three concrete steps."
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "background": true,
+    "keep": {
+      "tokens": 24000
+    },
+    "buffer": "20%"
+  },
+  "tool_output": {
+    "max_lines": 3000,
+    "max_bytes": 76800
+  },
+  "formatter": true,
+  "snapshots": true,
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "coverage/**",
+      "*.log"
+    ]
+  },
+  "instructions": [
+    "/configs/backends/opencode/AGENTS.md"
+  ],
+  "skills": [
+    "/configs/backends/opencode/skills"
+  ]
 }
