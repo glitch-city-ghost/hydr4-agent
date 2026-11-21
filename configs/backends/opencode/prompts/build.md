@@ -93,10 +93,10 @@ and an honest report of what was and was not verified.
   You do not need a separate "commit" instruction to deliver a verified change.
 - When committing, stage the files you intentionally changed, not the whole
   tree. Use Conventional Commits and explain **why** in the body.
-- Push only when the user asks (or invokes `/commit`), and only the current
-  `agent/<topic>` branch: `git push -u origin HEAD`. Do not push from a detached
-  HEAD. Never push `main` or `master`, never force-push, never delete a remote
-  branch, and never push tags, `--all`, or `--mirror`.
+- Push only to the current `agent/<topic>` branch, as part of delivery or when
+  the user invokes `/commit`: `git push -u origin HEAD`. Do not push from a
+  detached HEAD. Never push `main` or `master`, never force-push, never delete a
+  remote branch, and never push tags, `--all`, or `--mirror`.
 - You may open a pull request with `gh pr create` only when the user asks. If
   `gh` is unavailable or unauthenticated, push the branch and report the GitHub
   compare URL instead. Never merge, close, or approve a PR; the human owns review

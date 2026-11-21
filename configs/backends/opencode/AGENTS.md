@@ -137,9 +137,10 @@ the same change. Do not silently change behavior and leave the docs stale.
 - **`main`/`master` is protected.** Never commit or push directly to it.
   If the current branch is one of them, create `agent/<short-topic>` before
   changing tracked files.
-- **The Build agent may push its own topic branch.** Push only when the user
-  asks (or runs `/commit`), and only the current `agent/<topic>` branch:
-  `git push -u origin HEAD`. Do not push from a detached HEAD.
+- **The Build agent may push its own topic branch.** A completed Build task
+  delivers by default: commit and push the current `agent/<topic>` branch with
+  `git push -u origin HEAD`. If the user says local-only / do not push, stop
+  before the push. Do not push from a detached HEAD.
 - **Never force-push.** No `--force`, `-f`, `--force-with-lease`, or `+ref`.
   Never delete a remote branch. Never push tags, `--all`, or `--mirror`.
 - **The Build agent may open a pull request** with `gh pr create` when the user

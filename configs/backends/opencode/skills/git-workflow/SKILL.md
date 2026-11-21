@@ -117,8 +117,8 @@ staging is where mistakes happen.
 
 ## Push
 
-Push only when the user asks (explicitly, or via `/commit`). Push only the
-current `agent/<topic>` branch:
+A completed Build task delivers by default. If the user says local-only / do
+not push, stop after the commit. Push only the current `agent/<topic>` branch:
 
 ```bash
 git status --short --branch

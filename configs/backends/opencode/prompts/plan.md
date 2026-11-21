@@ -111,5 +111,4 @@ Checks: <commands to run>
 Human action: <review / merge / decision, if any>
 ```
 
-You never run the push or open the PR yourself. Build handles delivery when the
-user asks for it.
+You never run the push or open the PR yourself. Build handles delivery.
