@@ -139,3 +139,54 @@ Consequences for `hydr4-agent`:
 - A new container is unreachable until an entry is added to `routes.yaml`.
 - Renaming a service or a container requires a matching edit in `routes.yaml`. Otherwise ingress returns `502` while containers stay healthy.
 - The `traefik-net` network itself is created by `l3rn4-nix` (`systemd.services.traefik-network`).
+
+---
+
+## ADR-007 — Gateway-native OpenCode configuration and role-based agents
+
+**Status:** Accepted.
+
+**Context:**
+The first OpenCode setup only exposed one gateway model and left built-in
+OpenAI/DeepSeek providers active through `OPENAI_API_KEY` and
+`DEEPSEEK_API_KEY`. That mixed the gateway catalog with provider-catalog models
+the gateway cannot serve, and it gave no project instructions, role separation,
+or review/verification workflow. The result was a capable agent with a weak
+operating contract.
+
+**Decision:**
+Configure OpenCode around the gateway contract rather than around a single
+upstream provider:
+
+1. Define one custom OpenAI-compatible provider, `hydr4`, at
+   `http://gateway:3001/v1`, using `HYDRA_API_KEY`.
+2. Hard-deny every other provider with `policies`, so the model picker only
+   lists models the gateway can actually serve.
+3. Do not export `OPENAI_API_KEY` or `DEEPSEEK_API_KEY` from the OpenCode
+   backend. Only `HYDRA_API_KEY` reaches the agent.
+4. Assign models by role: DeepSeek Flash for build/plan/explore/verification,
+   Nemotron 3 Ultra 550B for independent review, and Fusion for a deliberate
+   second opinion. `auto` remains a manual fallback; `fusion` is reserved for
+   the oracle.
+5. Add read-only `reviewer`, `verifier`, and `oracle` subagents, plus `/review`,
+   `/review-fast`, `/verify`, `/oracle`, and `/handoff` commands.
+6. Keep global instructions, skills, and the provider/model catalog with the
+   mounted config in `configs/backends/opencode/`; keep repo-specific rules in
+   the root `AGENTS.md`.
+
+**Rationale:**
+- The gateway is the stable interface; upstream provider IDs and keys are not.
+- Hiding catalog models prevents confusing `Model unavailable` failures.
+- A different model family for review reduces correlated blind spots.
+- Read-only specialists make review and verification safe to run frequently.
+- Project instructions are part of the configuration, not tribal knowledge.
+
+**Consequences:**
+- Gateway model IDs become part of the agent configuration. Re-check
+  `GET /v1/models` when the gateway or its providers change.
+- `auto` and `fusion` routing can change; do not depend on their exact upstream
+  model in critical workflows.
+- The agent has no direct-provider fallback. If the gateway is down, the agent
+  is down; that is the intended failure mode, not a reason to add raw keys.
+- Existing sessions keep their selected model after a config change; a new
+  session is required to pick up the new default.
