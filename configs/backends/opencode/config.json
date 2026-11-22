@@ -6,6 +6,36 @@
     "todo": true,
     "subagent_depth": 1
   },
+  "permissions": [
+    { "action": "shell", "resource": "sudo *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -fr *", "effect": "ask" },
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    { "action": "shell", "resource": "git reset --hard *", "effect": "ask" },
+    { "action": "shell", "resource": "git clean *", "effect": "ask" },
+    { "action": "shell", "resource": "git rebase *", "effect": "ask" }
+  ],
+  "compaction": {
+    "auto": true,
+    "keep": {
+      "tokens": 20000
+    }
+  },
+  "tool_output": {
+    "max_lines": 1500,
+    "max_bytes": 49152
+  },
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "target/**",
+      "*.log"
+    ]
+  },
+  "skills": ["/configs/backends/opencode/skills"],
   "agents": {
     "engineer": {
       "description": "Primary coding agent. Model follows the session model.",
@@ -23,7 +53,6 @@
     "reviewer": {
       "description": "Read-only diff reviewer. Reports concrete defects only.",
       "mode": "subagent",
-      "model": "hydr4/nemotron-3-ultra-550b",
       "system": "{file:./prompts/reviewer.md}",
       "steps": 8,
       "permissions": [
