@@ -1,8 +1,110 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "deepseek/deepseek-flash",
+  "default_agent": "engineer",
   "experimental": {
-    "todo": true
+    "todo": true,
+    "subagent_depth": 1
+  },
+  "permissions": [
+    { "action": "shell", "resource": "sudo *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -rf *", "effect": "ask" },
+    { "action": "shell", "resource": "rm -fr *", "effect": "ask" },
+    { "action": "shell", "resource": "git push *", "effect": "ask" },
+    { "action": "shell", "resource": "git reset --hard *", "effect": "ask" },
+    { "action": "shell", "resource": "git clean *", "effect": "ask" },
+    { "action": "shell", "resource": "git rebase *", "effect": "ask" }
+  ],
+  "compaction": {
+    "auto": true,
+    "keep": {
+      "tokens": 20000
+    }
+  },
+  "tool_output": {
+    "max_lines": 1500,
+    "max_bytes": 49152
+  },
+  "watcher": {
+    "ignore": [
+      ".git/**",
+      "node_modules/**",
+      "dist/**",
+      "build/**",
+      "target/**",
+      "*.log"
+    ]
+  },
+  "skills": ["/configs/backends/opencode/skills"],
+  "agents": {
+    "engineer": {
+      "description": "Primary coding agent. Model follows the session model.",
+      "mode": "primary",
+      "system": "{file:./prompts/engineer.md}",
+      "steps": 50
+    },
+    "explore": {
+      "model": "hydr4/nemotron-3-ultra-550b",
+      "steps": 12
+    },
+    "plan": {
+      "steps": 16
+    },
+    "reviewer": {
+      "description": "Read-only diff reviewer and security auditor. Reports concrete defects only.",
+      "mode": "subagent",
+      "model": "hydr4/nemotron-3-ultra-550b",
+      "system": "{file:./prompts/reviewer.md}",
+      "steps": 12,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
+    },
+    "verifier": {
+      "description": "Runs verification commands and reports compact results. Never edits files.",
+      "mode": "subagent",
+      "model": "hydr4/nemotron-3-ultra-550b",
+      "system": "{file:./prompts/verifier.md}",
+      "steps": 12,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
+    },
+    "title": {
+      "model": "hydr4/nemotron-3-ultra-550b"
+    },
+    "summary": {
+      "model": "hydr4/nemotron-3-ultra-550b"
+    },
+    "compaction": {
+      "model": "hydr4/nemotron-3-ultra-550b"
+    }
+  },
+  "commands": {
+    "plan": {
+      "description": "Plan a task without editing files",
+      "agent": "plan",
+      "template": "Plan the following work. Explore the code first, then produce a concrete step-by-step plan: files to touch, order of operations, risks, and how to verify. Do not edit files.\n\n$ARGUMENTS"
+    },
+    "explore": {
+      "description": "Delegate a read-only investigation to the explore subagent",
+      "agent": "explore",
+      "template": "Investigate and report. Questions:\n\n$ARGUMENTS\n\nOutput format:\n- FILES: exact paths with line numbers\n- FACTS: only what you verified by reading, no speculation\n- UNCERTAIN: what you could not determine\nKeep it under 500 words."
+    },
+    "review": {
+      "description": "Review the current uncommitted diff",
+      "agent": "reviewer",
+      "template": "Review the current uncommitted diff. Report only concrete defects with file:line and evidence, highest severity first, maximum 7 findings. No style nitpicks, no praise. If there is nothing, say NO FINDINGS.\n\n$ARGUMENTS"
+    },
+    "verify": {
+      "description": "Run the project's checks and report results",
+      "agent": "verifier",
+      "template": "Verify the current changes. If a command is given below, run exactly that command. Otherwise detect the standard test, lint, and typecheck commands from the repository manifests and run only those. Do not modify any files.\n\n$ARGUMENTS"
+    },
+    "handoff": {
+      "description": "Write a compact handoff for a fresh session",
+      "template": "Write a handoff for a fresh session. Terse, no process narration. Sections: GOAL, DECISIONS, CHANGED FILES, OPEN QUESTIONS, NEXT ACTION.\n\n$ARGUMENTS"
+    }
   },
   "providers": {
     "hydr4": {
@@ -17,9 +119,15 @@
       },
       "models": {
         "nemotron-3-ultra-550b": {
-          "name": "NVIDIA Nemotron 550B",
+          "name": "NVIDIA Nemotron 3 Ultra 550B",
           "capabilities": {
-            "tools": true
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"]
+          },
+          "limit": {
+            "context": 1000000,
+            "output": 32768
           }
         }
       }
@@ -32,6 +140,20 @@
         "timeout": 2400000,
         "headerTimeout": 2400000,
         "chunkTimeout": 2400000
+      },
+      "models": {
+        "deepseek-flash": {
+          "name": "DeepSeek V4.1 Flash",
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"]
+          },
+          "limit": {
+            "context": 1048576,
+            "output": 32768
+          }
+        }
       }
     }
   }
