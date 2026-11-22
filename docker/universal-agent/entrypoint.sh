@@ -1,6 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
+# OpenCode uses this scratch directory. Recreate it when /tmp is fresh or tmpfs.
+mkdir -p /tmp/opencode
+
 # --- Git Identity Setup ---
 # Use a path inside the mounted .config folder so settings persist
 export GIT_CONFIG_GLOBAL="/home/agent/.config/.gitconfig"
