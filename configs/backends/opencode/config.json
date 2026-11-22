@@ -51,10 +51,11 @@
       "steps": 16
     },
     "reviewer": {
-      "description": "Read-only diff reviewer. Reports concrete defects only.",
+      "description": "Read-only diff reviewer and security auditor. Reports concrete defects only.",
       "mode": "subagent",
+      "model": "hydr4/nemotron-3-ultra-550b",
       "system": "{file:./prompts/reviewer.md}",
-      "steps": 8,
+      "steps": 12,
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
