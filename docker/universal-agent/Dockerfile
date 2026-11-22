@@ -26,12 +26,18 @@ RUN ARCH="$(dpkg --print-architecture)" \
 # Do not ssh-keyscan at build time: that is TOFU and not reproducible.
 
 # Install OpenCode and DeepSeek Harness (CLI)
-RUN npm install -g @opencode/cli dsh
+# The postinstall verifies the binary by running `opencode --version` as root,
+# which leaves root-owned scratch files in /tmp. Drop them in the same layer.
+RUN npm install -g @opencode/cli dsh \
+    && rm -rf /tmp/opencode /tmp/.bun-* /tmp/node-compile-cache
 
 # Create the user
 RUN userdel -r node || true
 
 RUN useradd -u 1000 -U -m -s /bin/bash agent
+
+# OpenCode prefers /tmp/opencode for scratch files; create it for the runtime user.
+RUN install -d -o agent -g agent -m 755 /tmp/opencode
 
 # Create the config and SSH directories, and give the agent user ownership (for volumes)
 RUN mkdir -p /home/agent/.local/share/opencode /home/agent/.config /home/agent/.ssh \
