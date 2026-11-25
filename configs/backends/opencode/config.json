@@ -13,7 +13,34 @@
     { "action": "shell", "resource": "git push *", "effect": "ask" },
     { "action": "shell", "resource": "git reset --hard *", "effect": "ask" },
     { "action": "shell", "resource": "git clean *", "effect": "ask" },
-    { "action": "shell", "resource": "git rebase *", "effect": "ask" }
+    { "action": "shell", "resource": "git rebase *", "effect": "ask" },
+    { "action": "shell", "resource": "gh *", "effect": "allow" },
+    { "action": "shell", "resource": "gh pr merge*", "effect": "deny" },
+    { "action": "shell", "resource": "gh pr close*", "effect": "deny" },
+    { "action": "shell", "resource": "gh pr review*", "effect": "deny" },
+    { "action": "shell", "resource": "gh pr revert*", "effect": "deny" },
+    { "action": "shell", "resource": "gh pr lock*", "effect": "deny" },
+    { "action": "shell", "resource": "gh pr unlock*", "effect": "deny" },
+    { "action": "shell", "resource": "gh pr update-branch*", "effect": "deny" },
+    { "action": "shell", "resource": "gh api*", "effect": "deny" },
+    { "action": "shell", "resource": "gh auth token*", "effect": "deny" },
+    { "action": "shell", "resource": "gh auth login*", "effect": "deny" },
+    { "action": "shell", "resource": "gh auth logout*", "effect": "deny" },
+    { "action": "shell", "resource": "gh auth setup-git*", "effect": "deny" },
+    { "action": "shell", "resource": "gh repo delete*", "effect": "deny" },
+    { "action": "shell", "resource": "gh repo edit*", "effect": "deny" },
+    { "action": "shell", "resource": "gh secret*", "effect": "deny" },
+    { "action": "shell", "resource": "gh variable*", "effect": "deny" },
+    { "action": "shell", "resource": "gh workflow*", "effect": "deny" },
+    { "action": "shell", "resource": "gh release*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* --force*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* -f*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* --delete*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* --mirror*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* --prune*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* --all*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* +*", "effect": "deny" },
+    { "action": "shell", "resource": "git push* :*", "effect": "deny" }
   ],
   "compaction": {
     "auto": true,
@@ -100,6 +127,11 @@
       "description": "Run the project's checks and report results",
       "agent": "verifier",
       "template": "Verify the current changes. If a command is given below, run exactly that command. Otherwise detect the standard test, lint, and typecheck commands from the repository manifests and run only those. Do not modify any files.\n\n$ARGUMENTS"
+    },
+    "pr": {
+      "description": "Open or update a pull request for the current branch",
+      "agent": "engineer",
+      "template": "Open or update a pull request for the current branch. Load and follow the github-pr skill. Use the real diff and only verification you actually ran. If an open PR already exists for this branch, update its description instead of creating a duplicate. Never merge, approve, close, or force-push. Report the PR URL and the CI status.\n\n$ARGUMENTS"
     },
     "handoff": {
       "description": "Write a compact handoff for a fresh session",

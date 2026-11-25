@@ -43,6 +43,31 @@ if ! git config --global --get-all safe.directory | grep -qxF "/workspace"; then
     git config --global --add safe.directory "/workspace"
 fi
 
+# --- GitHub CLI (optional) ---
+# gh is a GitHub API client for pull requests and CI. It is not a git transport:
+# commits are pushed over SSH above, and we deliberately never call
+# `gh auth setup-git`, which would reintroduce a credential helper.
+export GH_CONFIG_DIR="${GH_CONFIG_DIR:-/home/agent/.config/gh}"
+export GH_PROMPT_DISABLED=1
+export GH_NO_UPDATE_NOTIFIER=1
+export GH_PAGER=cat
+mkdir -p "$GH_CONFIG_DIR"
+
+GH_TOKEN_FILE="${GH_TOKEN_FILE:-/home/agent/.secrets/github/token}"
+# -f, not -r: a missing source file may be created by Docker as a directory.
+if [ -z "${GH_TOKEN:-}" ] && [ -f "${GH_TOKEN_FILE}" ] && [ -r "${GH_TOKEN_FILE}" ]; then
+    GH_TOKEN="$(tr -d '\r\n' < "${GH_TOKEN_FILE}")"
+    if [ -n "${GH_TOKEN}" ]; then
+        export GH_TOKEN
+    fi
+fi
+
+if [ -n "${GH_TOKEN:-}" ]; then
+    echo "🔑 GitHub CLI token configured"
+else
+    echo "ℹ️  GitHub CLI token not mounted; gh will run unauthenticated"
+fi
+
 if [ -z "${AGENT_BACKEND:-}" ]; then
     echo "❌ AGENT_BACKEND is not set. Available: opencode, dsh."
     exit 1

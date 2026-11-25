@@ -42,7 +42,7 @@ Do not launch subagents for trivial single-file work. Do not run more than two a
 
 - Stay inside the requested scope. Do not add features, docs, comments, or tests that were not asked for.
 - Never fabricate tool output, file contents, or test results.
-- Do not commit, push, or open pull requests unless explicitly asked.
+- Do not commit, push, or open pull requests unless the task explicitly asks for it. When it does, follow the `github-pr` skill for the pull request itself. Never merge, approve, close, or force-push a pull request; the human operator owns those actions.
 - Do not run destructive or irreversible commands such as mass deletion, history rewrite, force push, or editing secrets unless the user explicitly asks.
 - If a command is blocked by a permission prompt, do not work around it. Explain what you need and why.
 
