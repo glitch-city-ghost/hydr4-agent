@@ -20,6 +20,10 @@ Do not use it to merge, approve, or close pull requests. Those actions belong to
 3. The current branch is not the base branch and has at least one commit to deliver.
 4. The push remote is the GitHub repository that owns the head branch.
 
+A classic `repo` token can make `gh auth status` print a `read:org` warning while still exiting 0.
+That warning only affects organization metadata; do not stop for it. A non-zero exit or
+`not logged in` is fatal.
+
 # Workflow
 
 ## 1. Resolve the repositories
@@ -161,6 +165,15 @@ For an existing PR:
 
 ```bash
 gh pr edit <number> --repo "$BASE_REPO" \
+  --title "$TITLE" --body-file /tmp/gh-pr-body.md
+```
+
+If `gh pr edit` fails because the token cannot read organization metadata (`The 'login' field
+requires one of the following scopes: ['read:org']`), update the same fields through the issue
+endpoint. A pull request is an issue for its title and body:
+
+```bash
+gh issue edit <number> --repo "$BASE_REPO" \
   --title "$TITLE" --body-file /tmp/gh-pr-body.md
 ```
 
