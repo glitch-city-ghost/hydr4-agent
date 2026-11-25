@@ -109,7 +109,7 @@ Migrate all persistent storage to explicit **Bind Mounts** located in a centrali
 - `~/hydr4-data/gateway/` — FreeLLMAPI database.
 - `~/hydr4-data/agent/config/` — Agent configurations (`.config`).
 - `~/hydr4-data/agent/local-share/` — OpenCode chat history and sessions.
-- `~/hydr4-data/secrets/` — (Future) SSH keys and sensitive tokens.
+- `~/hydr4-data/secrets/` — mounted credentials (SSH keys, tokens, and the like). Which ones exist is operator configuration; see ADR-007.
 
 **Consequences:**
 - **Pros:** Easy backups (just copy the folder), transparent data access, strict separation of code (Git) and state (Disk).
@@ -139,3 +139,27 @@ Consequences for `hydr4-agent`:
 - A new container is unreachable until an entry is added to `routes.yaml`.
 - Renaming a service or a container requires a matching edit in `routes.yaml`. Otherwise ingress returns `502` while containers stay healthy.
 - The `traefik-net` network itself is created by `l3rn4-nix` (`systemd.services.traefik-network`).
+
+---
+
+## ADR-007 — Git and GitHub access are operator configuration
+
+**Status:** Accepted. Supersedes the credential and Git-workflow claims previously made in README § Zero-Trust Security Model, `docs/contracts/host.md`, and `docs/contracts/agent-seam.md`.
+
+**Context:**
+The earlier docs prescribed one deployment shape: a dedicated bot account, an SSH-only key, no PAT, pushes only to the bot's fork, and a human opening every pull request. That is a valid shape, but it is not a property of the container. It became wrong as soon as the agent worked in a clone of the primary repository, used its own GitHub account as a collaborator with branch-protection limits, or needed `gh` to open PRs. Writing a policy into the architecture docs makes the docs lie about what the image enforces and prevents operators from choosing a stricter or looser workflow.
+
+**Decision:**
+The repository owns the mechanism, not the Git workflow:
+
+- the image carries tools, not credentials;
+- credentials are supplied by the host as read-only mounts or environment variables;
+- the operator decides which account, which key or token, which permissions, which remotes, and whether the agent may push, open PRs, or merge;
+- docs may show the currently wired mounts as examples, with the blast radius, but must not claim that the image guarantees a fork-only, SSH-only, or PAT-free workflow;
+- enforcement belongs to GitHub (account permissions, collaborator role, branch protection) and to the agent configuration (permissions, skills), not to prose.
+
+**Consequences:**
+- "No PAT in the container" is no longer an invariant. "No credential in the image or the repository" is.
+- The operator must scope mounted credentials, protect `~/hydr4-data/secrets/`, and rotate them. `./hydra check` cannot verify GitHub permissions.
+- Permission rules and prompt rules are guardrails, not a sandbox: the real boundary is what the credential can do.
+- Changes to Git/GitHub integration do not require editing the architecture contract; they are configuration plus, at most, a tool mounted in the image.

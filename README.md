@@ -107,9 +107,9 @@ Open your browser:
 ## 🔒 Zero-Trust Security Model
 
 We are paranoid, and we are proud of it.
-*   **No Host Access:** The agent cannot read your personal `.ssh` keys or your Windows drives. It only sees `./workspace`, its own agent config, and a read-only bot SSH key.
+*   **No Host Access:** The agent cannot read your personal `.ssh` keys or your Windows drives. It only sees `./workspace`, its own agent config, and the read-only mounts declared in `compose/agents.yaml`.
 *   **Localhost Only:** All ports are bound to `127.0.0.1`. No one on your local network can touch your agent.
-*   **GitHub Access:** The agent authenticates as a dedicated bot account with an SSH key. No GitHub PAT is stored in the container. The bot can push only to its own fork; you review and merge pull requests.
+*   **GitHub Access:** No GitHub credentials are baked into the image or tracked in this repository. Whatever the operator mounts under `~/hydr4-data/secrets/` is what the agent gets — an SSH key, a scoped token, or nothing. The account, its permissions, and the review/merge workflow are operator configuration, not a property of the image. Give the agent only the access that the workflow you want it to run actually requires.
 *   **Key Isolation:** Agents never see the raw provider keys (NVIDIA, Google). They only get `HYDRA_API_KEY`, which talks to the gateway.
 *   **Resource Limits:** The agent is capped at `4G` RAM and `2.0` CPU. It won't crash your WSL2 host if it tries to run a fork bomb.
 

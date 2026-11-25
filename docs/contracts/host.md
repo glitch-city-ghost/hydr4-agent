@@ -6,7 +6,7 @@
 
 The host runs Docker and the outside world. The repository brings the application. The boundary
 between the two is small, and this is all of it: two external networks, one directory tree outside
-the repository, the SSH key, and the egress proxy address.
+the repository, the credentials mounted there, and the egress proxy address.
 
 ## 1. Networks
 
@@ -55,6 +55,12 @@ Persistent state lives in `~/hydr4-data/`, outside the repository:
 | `~/hydr4-data/agent/local-share` | `/home/agent/.local/share/opencode` |
 | `~/hydr4-data/secrets/ssh` | `/home/agent/.ssh` (read-only) |
 
+The credential mounts are operator configuration, not part of the agent contract. The current
+compose file mounts `~/hydr4-data/secrets/ssh` read-only at `/home/agent/.ssh`; the operator may
+remove it, leave it empty, or add another read-only mount for the workflow they want the agent to
+run. The image carries no credentials, and this repository does not prescribe an account model,
+remote topology, or review/merge process. Anything mounted must be readable by uid 1000.
+
 The host creates these directories before the first start, owned by the user running Compose. If
 Docker creates a missing directory itself, it belongs to root and the `user: "1000:1000"` of the
 agent container cannot write to it (ADR-004, ADR-005).
@@ -71,7 +77,7 @@ All secrets are files supplied by the host. None of them is tracked in Git.
 | `ENCRYPTION_KEY` | root `.env`; FreeLLMAPI database key |
 | `OPENCODE_PASSWORD` | root `.env`; OpenCode Web UI |
 | Provider keys | gateway dashboard or `.env`; stored under `~/hydr4-data/gateway/` |
-| GitHub bot SSH key | `~/hydr4-data/secrets/ssh/`: `0700` on the directory, `0600` on the key |
+| Git/GitHub credentials (optional) | `~/hydr4-data/secrets/`: an SSH key under `ssh/` (`0700` on the directory, `0600` on the key, `0644` on `known_hosts`) and/or a token file. Which credentials exist, what they grant, and when they expire is the operator's responsibility. |
 
 ## 5. Prerequisites
 
@@ -80,7 +86,7 @@ Before the first start, the host provides:
 1. Docker Engine and Docker Compose v2.
 2. The `traefik-net` network, and Traefik attached to it.
 3. The `~/hydr4-data/` tree from §3, owned by the user running Compose (`uid 1000`).
-4. The bot SSH key in `~/hydr4-data/secrets/ssh/`, with the permissions from §4.
+4. Optional: Git/GitHub credentials in `~/hydr4-data/secrets/`, with the permissions from §4. Without them, Git over SSH and GitHub API operations do not work; the stack still starts.
 5. `mihomo` running, and `UPSTREAM_PROXY` in `.env` pointing at a host address that reaches it.
 6. The agent's sibling `workspace/` directory, created outside this repository.
 
@@ -88,7 +94,8 @@ Before the first start, the host provides:
 
 `./hydra check` covers: compose config, both containers' health, the gateway health endpoint,
 gateway DNS from the agent, and both `*.localhost` domains through Traefik. It does not touch the
-host proxy or GitHub.
+host proxy or GitHub. GitHub access is operator configuration, not a contract, so the checks below
+are examples: run them only for the credentials you actually mounted.
 
 These are the checks it does not cover; run them by hand on the host:
 
