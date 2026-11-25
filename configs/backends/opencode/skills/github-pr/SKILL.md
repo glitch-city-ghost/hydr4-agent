@@ -1,125 +1,79 @@
 ---
 name: GitHub Pull Requests
-description: Open or update a GitHub pull request with the gh CLI after the work is committed and pushed. Use when the task asks for a PR, a PR description, CI status, or review feedback on a branch.
+description: Create or update a GitHub pull request with gh after the work is committed. Use when asked for a PR, a PR description, CI status, or review feedback.
 ---
 
-# When to use
+# Rules
 
-Use this skill when the task asks you to deliver a branch as a pull request, update an existing PR,
-or inspect CI and review feedback for a PR. The skill starts after the work is committed. It does not
-decide whether the change is correct.
-
-Do not use it to merge, approve, or close pull requests. Those actions belong to the human operator.
-
-# Preconditions
-
-1. `gh auth status` succeeds. If it does not, report the exact error and stop. Do not run
-   `gh auth login`, ask for a token, or print environment variables.
-2. `git status --porcelain --untracked-files=no` is empty. If it is not, report the files and stop;
-   do not commit unrelated work.
-3. The current branch is not the base branch and has at least one commit to deliver.
-4. The push remote is the GitHub repository that owns the head branch.
-
-A classic `repo` token can make `gh auth status` print a `read:org` warning while still exiting 0.
-That warning only affects organization metadata; do not stop for it. A non-zero exit or
-`not logged in` is fatal.
+- Never merge, approve, close, reopen, or force-push a PR. The human owns merge.
+- Never touch a PR that does not belong to this branch.
+- Never run `gh api`, `gh auth token`, `env`, or `printenv`; never print a token.
+- Never invent verification, issue numbers, screenshots, or CI results.
+- No AI/agent attribution. No reviewers, labels, assignees, or milestones unless asked.
+- Stop and report if the worktree is dirty, you are on the base branch, or the diff mixes unrelated topics.
+- On a permission/auth error, or the same failure twice, stop and report it. Do not look for a workaround.
 
 # Workflow
 
-## 1. Resolve the repositories
+## 1. Preflight
 
 ```bash
-CURRENT_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-BASE_REPO="$(gh repo view --json nameWithOwner,parent --jq '.parent.nameWithOwner // .nameWithOwner')"
+gh auth status
+git status --porcelain --untracked-files=no
+git remote get-url origin
+REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
+BASE="$(gh repo view --json defaultBranchRef --jq .defaultBranchRef.name)"
 BRANCH="$(git branch --show-current)"
-PERMISSION="$(gh repo view --json viewerPermission --jq .viewerPermission)"
-BASE_BRANCH="$(gh repo view "$BASE_REPO" --json defaultBranchRef --jq .defaultBranchRef.name)"
 ```
 
-- `BASE_REPO` is the parent when the clone is a fork, otherwise the current repository.
-- `BASE_BRANCH` comes from GitHub. Never assume `main`.
-- `PERMISSION` must allow pushing to the current repository. If it is `READ` or `TRIAGE`, stop and
-  report that the operator needs to grant write access or switch to a fork. `WRITE`, `MAINTAIN`, and
-  `ADMIN` can push. Do not try to push to the base.
+Warnings from `gh auth status` are not failures. If the task names a base branch, use it. Stop if
+`BRANCH` is empty or equals `BASE`, or if `origin` is not `REPO`.
 
-## 2. Find the matching remote
+## 2. Existing PR
 
 ```bash
-git remote -v
-PUSH_REMOTE="$(git remote -v | awk -v repo="$CURRENT_REPO" '$2 ~ repo { print $1; exit }')"
-[ -n "$PUSH_REMOTE" ] || { echo "no remote matches $CURRENT_REPO"; exit 1; }
+gh pr list --repo "$REPO" --head "$BRANCH" --state all \
+  --json number,url,state,isDraft
 ```
 
-If several remotes match, use `origin`. Do not push to a remote that belongs to another repository.
+- Exactly one open PR: set `NUMBER` and ignore older merged/closed PRs.
+- More than one open: report the numbers and stop.
+- No open PR, but any merged or closed one: report its URL and stop; do not reuse the branch.
+- None at all: continue.
 
-## 3. Check for an existing PR
+## 3. Push
 
 ```bash
-if [ "$CURRENT_REPO" = "$BASE_REPO" ]; then
-  HEAD_FILTER="$BRANCH"
-else
-  HEAD_FILTER="${CURRENT_REPO%/*}:$BRANCH"
-fi
-
-gh pr list --repo "$BASE_REPO" --head "$HEAD_FILTER" --state all \
-  --json number,url,title,state,isDraft
+git push -u origin HEAD
 ```
 
-- Exactly one open PR: update its description (step 7), then report it. Do not create a duplicate.
-- More than one open PR: stop and report the numbers; this branch is ambiguous.
-- A merged PR and no open PR: stop and report its URL. The work already landed; do not try to create
-  another PR for the same branch. If new work is needed, start a new branch from the base.
-- A closed PR and no open PR: stop and report its URL. Do not reopen or replace it without an explicit
-  instruction.
-- No PR in any state: continue.
+No force, no delete. On rejection, report the error and stop.
 
-## 4. Read the change
+## 4. Write
 
-Fetch the base branch first:
+Read the actual change, not just commit messages:
 
 ```bash
-BASE_REMOTE="$(git remote -v | awk -v repo="$BASE_REPO" '$2 ~ repo { print $1; exit }')"
-[ -n "$BASE_REMOTE" ] || BASE_REMOTE=origin
-git fetch --no-tags "$BASE_REMOTE" "$BASE_BRANCH"
-BASE_REF="$BASE_REMOTE/$BASE_BRANCH"
+git fetch --no-tags origin "$BASE"
+git log --oneline --no-merges "origin/$BASE..HEAD"
+git diff --stat "origin/$BASE...HEAD"
+git diff "origin/$BASE...HEAD"
 ```
 
-Then read the actual change. Do not write the description from commit messages alone:
+If the diff is empty, stop: there is nothing to PR.
+
+Title: imperative, at most 72 characters, in the repo language and style (last 10 merged PRs).
 
 ```bash
-git log --oneline --no-merges "$BASE_REF..HEAD"
-git diff --stat "$BASE_REF...HEAD"
-git diff "$BASE_REF...HEAD"
+gh pr list --repo "$REPO" --state merged --limit 10 --json title
 ```
-
-If a PR template exists, read and follow it: `.github/PULL_REQUEST_TEMPLATE.md`,
-`.github/pull_request_template.md`, `docs/PULL_REQUEST_TEMPLATE.md`. It wins over the structure below.
-
-## 5. Push the branch
-
-Use the remote chosen in step 2. Never force, never delete, never push to the base branch:
-
-```bash
-git push -u "$PUSH_REMOTE" HEAD
-```
-
-If the push is rejected, report the exact error and stop. Do not rebase, amend, force-push, or retry
-with different flags.
-
-## 6. Write the description
-
-Title:
-
-- imperative, specific, at most 72 characters;
-- match the repository style: read the last 10 merged PR titles and the recent commit subjects;
-- no `WIP`, no emoji, no "Generated by" or "AI" attribution unless the repository already uses them.
 
 Body:
 
 ```markdown
 ## Summary
 
-- <what changed and why, 1-3 bullets>
+- <what changed and why>
 
 ## Changes
 
@@ -127,90 +81,56 @@ Body:
 
 ## Verification
 
-- `<exact command>` — <result, or NOT RUN>
+- `<command>`: <result>
 
 ## Risk
 
 - <behavior, compatibility, deployment, or security risk; "Low" if none>
 ```
 
-Rules for the body:
+- Summary: 1-3 bullets. Changes: grouped by path, not every line.
+- Verification: only commands actually run. If none, `NOT RUN: <reason>`.
+- `Closes #N` only for a known issue.
+- No secrets, `.env` contents, tokens, raw logs, customer data, empty sections, TODOs, or unchecked checklists.
+- Follow `.github/PULL_REQUEST_TEMPLATE.md` or `.github/pull_request_template.md` if present.
+- Write the title to `/tmp/pr-title` and the body to `/tmp/pr-body.md`.
 
-- Summarize groups of files, not every touched line.
-- `Verification` contains only commands you actually ran in this session. Never invent a result.
-  If you ran nothing, write `NOT RUN: <reason>`.
-- Link an issue with `Closes #N` only when the number is known from the task or a commit trailer.
-- No secrets, no `.env` contents, no tokens, no customer data, no raw logs.
-- No checklists that will never be filled. No "TODO" sections left behind.
+## 5. Create or edit
 
-Write the body to `/tmp/gh-pr-body.md` and pass it with `--body-file`.
-
-## 7. Create or update
-
-For a new PR:
+New PR:
 
 ```bash
-gh pr create \
-  --repo "$BASE_REPO" \
-  --base "$BASE_BRANCH" \
-  --head "$HEAD_FILTER" \
-  --title "$TITLE" \
-  --body-file /tmp/gh-pr-body.md
+PR_URL="$(gh pr create \
+  --repo "$REPO" \
+  --base "$BASE" \
+  --head "$BRANCH" \
+  --title "$(cat /tmp/pr-title)" \
+  --body-file /tmp/pr-body.md)"
+NUMBER="${PR_URL##*/}"
 ```
 
-Add `--draft` only when the task says the work is WIP, the branch is a spike, or the local checks
-fail. Otherwise open it ready for review. The human still owns merge.
-
-For an existing PR:
+Existing open PR:
 
 ```bash
-gh pr edit <number> --repo "$BASE_REPO" \
-  --title "$TITLE" --body-file /tmp/gh-pr-body.md
+gh pr edit "$NUMBER" --repo "$REPO" \
+  --title "$(cat /tmp/pr-title)" \
+  --body-file /tmp/pr-body.md
 ```
 
-If `gh pr edit` fails because the token cannot read organization metadata (`The 'login' field
-requires one of the following scopes: ['read:org']`), update the same fields through the issue
-endpoint. A pull request is an issue for its title and body:
+Use `--draft` only when the task says WIP, the branch is a spike, or local checks fail.
+
+## 6. Report
 
 ```bash
-gh issue edit <number> --repo "$BASE_REPO" \
-  --title "$TITLE" --body-file /tmp/gh-pr-body.md
+gh pr checks "$NUMBER" --repo "$REPO"
 ```
 
-Do not change its base branch unless the task explicitly asks.
-
-## 8. Report CI
-
-Run the checks once, without waiting:
+No `--watch`. "No checks reported" is a valid result, not an error to retry. If a check failed:
 
 ```bash
-gh pr checks <number> --repo "$BASE_REPO"
+gh run list --repo "$REPO" --branch "$BRANCH" --limit 5
+gh run view <run-id> --repo "$REPO" --log-failed
 ```
 
-Do not use `--watch`: it blocks until every check finishes and can hang the session. If the command
-reports that no checks exist, say so. A non-zero exit with "no checks reported" is not a failure and
-must not be retried. If the command fails because the token cannot read check runs, do not hide the
-error: report the workflow runs via `gh run list` instead. If a check failed, get the failing details
-without dumping the whole log:
-
-```bash
-gh run list --repo "$BASE_REPO" --branch "$BRANCH" --limit 5
-gh run view <run-id> --repo "$BASE_REPO" --log-failed
-```
-
-Summarize the failing step and the relevant lines only. Report the PR URL and the current check
-states. Do not claim CI passed when it is pending or when you did not read it.
-
-# Hard rules
-
-- Never merge, approve, close, reopen, lock, or unlock a PR.
-- Never enable auto-merge, never mark a failing PR ready for review, never bypass a required review.
-- Never force-push, delete a branch, rewrite published history, or push to the base branch.
-- Never run `gh api`. If a needed operation has no `gh pr`, `gh run`, or `gh repo view` command,
-  report the limitation instead of dropping to raw HTTP.
-- Never run `gh auth token`, `env`, `printenv`, or read the token file. Never put a token in a command,
-  URL, commit, PR body, or log.
-- Never touch PRs created by other people.
-- Do not add reviewers, assignees, labels, milestones, or projects unless the task asks.
-- If GitHub keeps returning the same error twice, stop and report it. Do not loop.
-- If the push or PR creation would include a secret, stop and report the file.
+Summarize the failing step, not the whole log. Report the PR URL, draft state, and check states.
+Pending is not a pass. Never claim CI succeeded unless you saw it succeed.
