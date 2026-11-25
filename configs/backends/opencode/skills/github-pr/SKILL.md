@@ -26,7 +26,7 @@ Do not use it to merge, approve, or close pull requests. Those actions belong to
 
 ```bash
 CURRENT_REPO="$(gh repo view --json nameWithOwner --jq .nameWithOwner)"
-BASE_REPO="$(gh repo view --json parent --jq '.parent.nameWithOwner // .nameWithOwner')"
+BASE_REPO="$(gh repo view --json nameWithOwner,parent --jq '.parent.nameWithOwner // .nameWithOwner')"
 BRANCH="$(git branch --show-current)"
 PERMISSION="$(gh repo view --json viewerPermission --jq .viewerPermission)"
 BASE_BRANCH="$(gh repo view "$BASE_REPO" --json defaultBranchRef --jq .defaultBranchRef.name)"
@@ -35,8 +35,8 @@ BASE_BRANCH="$(gh repo view "$BASE_REPO" --json defaultBranchRef --jq .defaultBr
 - `BASE_REPO` is the parent when the clone is a fork, otherwise the current repository.
 - `BASE_BRANCH` comes from GitHub. Never assume `main`.
 - `PERMISSION` must allow pushing to the current repository. If it is `READ` or `TRIAGE`, stop and
-  report that the operator needs to grant write access or switch to a fork. Do not try to push to
-  the base.
+  report that the operator needs to grant write access or switch to a fork. `WRITE`, `MAINTAIN`, and
+  `ADMIN` can push. Do not try to push to the base.
 
 ## 2. Find the matching remote
 
@@ -57,13 +57,17 @@ else
   HEAD_FILTER="${CURRENT_REPO%/*}:$BRANCH"
 fi
 
-gh pr list --repo "$BASE_REPO" --head "$HEAD_FILTER" --state open \
-  --json number,url,title,isDraft
+gh pr list --repo "$BASE_REPO" --head "$HEAD_FILTER" --state all \
+  --json number,url,title,state,isDraft
 ```
 
-- One open PR: update its description (step 7), then report it. Do not create a duplicate.
-- More than one: stop and report the numbers; this branch is ambiguous.
-- None: continue.
+- Exactly one open PR: update its description (step 7), then report it. Do not create a duplicate.
+- More than one open PR: stop and report the numbers; this branch is ambiguous.
+- A merged PR and no open PR: stop and report its URL. The work already landed; do not try to create
+  another PR for the same branch. If new work is needed, start a new branch from the base.
+- A closed PR and no open PR: stop and report its URL. Do not reopen or replace it without an explicit
+  instruction.
+- No PR in any state: continue.
 
 ## 4. Read the change
 
@@ -171,9 +175,10 @@ gh pr checks <number> --repo "$BASE_REPO"
 ```
 
 Do not use `--watch`: it blocks until every check finishes and can hang the session. If the command
-reports that no checks exist, say so. If the command fails because the token cannot read check runs,
-do not hide the error: report the workflow runs via `gh run list` instead. If a check failed, get the
-failing details without dumping the whole log:
+reports that no checks exist, say so. A non-zero exit with "no checks reported" is not a failure and
+must not be retried. If the command fails because the token cannot read check runs, do not hide the
+error: report the workflow runs via `gh run list` instead. If a check failed, get the failing details
+without dumping the whole log:
 
 ```bash
 gh run list --repo "$BASE_REPO" --branch "$BRANCH" --limit 5
