@@ -109,7 +109,7 @@ Migrate all persistent storage to explicit **Bind Mounts** located in a centrali
 - `~/hydr4-data/gateway/` — FreeLLMAPI database.
 - `~/hydr4-data/agent/config/` — Agent configurations (`.config`).
 - `~/hydr4-data/agent/local-share/` — OpenCode chat history and sessions.
-- `~/hydr4-data/secrets/` — (Future) SSH keys and sensitive tokens.
+- `~/hydr4-data/secrets/` — mounted credentials (SSH keys, tokens, and the like). Which ones exist is operator configuration; see ADR-007.
 
 **Consequences:**
 - **Pros:** Easy backups (just copy the folder), transparent data access, strict separation of code (Git) and state (Disk).
@@ -139,3 +139,74 @@ Consequences for `hydr4-agent`:
 - A new container is unreachable until an entry is added to `routes.yaml`.
 - Renaming a service or a container requires a matching edit in `routes.yaml`. Otherwise ingress returns `502` while containers stay healthy.
 - The `traefik-net` network itself is created by `l3rn4-nix` (`systemd.services.traefik-network`).
+
+---
+
+## ADR-007 — Git and GitHub access are operator configuration
+
+**Status:** Accepted. Supersedes the credential and Git-workflow claims previously made in README § Zero-Trust Security Model, `docs/contracts/host.md`, and `docs/contracts/agent-seam.md`.
+
+**Context:**
+The earlier docs prescribed one deployment shape: a dedicated bot account, an SSH-only key, no PAT, pushes only to the bot's fork, and a human opening every pull request. That is a valid shape, but it is not a property of the container. It became wrong as soon as the agent worked in a clone of the primary repository, used its own GitHub account as a collaborator with branch-protection limits, or needed `gh` to open PRs. Writing a policy into the architecture docs makes the docs lie about what the image enforces and prevents operators from choosing a stricter or looser workflow.
+
+**Decision:**
+The repository owns the mechanism, not the Git workflow:
+
+- the image carries tools, not credentials;
+- credentials are supplied by the host as read-only mounts or environment variables;
+- the operator decides which account, which key or token, which permissions, which remotes, and whether the agent may push, open PRs, or merge;
+- docs may show the currently wired mounts as examples, with the blast radius, but must not claim that the image guarantees a fork-only, SSH-only, or PAT-free workflow;
+- enforcement belongs to GitHub (account permissions, collaborator role, branch protection) and to the agent configuration (permissions, skills), not to prose.
+
+**Consequences:**
+- "No PAT in the container" is no longer an invariant. "No credential in the image or the repository" is.
+- The operator must scope mounted credentials, protect `~/hydr4-data/secrets/`, and rotate them. `./hydra check` cannot verify GitHub permissions.
+- Permission rules and prompt rules are guardrails, not a sandbox: the real boundary is what the credential can do.
+- Changes to Git/GitHub integration do not require editing the architecture contract; they are configuration plus, at most, a tool mounted in the image.
+
+---
+
+## ADR-008 — GitHub CLI in the agent image
+
+**Status:** Accepted.
+
+**Context:**
+Opening a pull request is a GitHub API operation, not a git operation. `git push` uploads refs; the
+PR, its body, reviews, and CI results live on the platform. The agent already has an SSH key for the
+data plane. Adding pull requests means adding a separate client for the control plane.
+
+Alternatives considered:
+
+- **GitHub MCP server.** Same API plus a large tool surface, another process, and a second auth path.
+  Rejected for this scope.
+- **Hand-written `curl` calls to the REST API.** More parsing and error handling in the model, less
+  deterministic. Rejected.
+- **Host-side `gh` only.** The agent has no access to the host. Rejected.
+- **GitHub App installation tokens.** Correct for multi-tenant or short-lived credentials, but adds
+  a private key, JWT signing, and a token-refresh helper. Kept as a future option if PAT policy or
+  rotation becomes a problem.
+
+**Decision:**
+Ship the official GitHub CLI (`gh`) in `docker/universal-agent`, pinned by `ARG GH_VERSION` and
+verified against the release checksum. Authenticate it only from an optional read-only token file
+mounted at `/home/agent/.secrets/github/token` and exported as `GH_TOKEN` by `entrypoint.sh`.
+
+- No token is baked into the image or written to the repository.
+- `gh` is a GitHub API client. Git commit and push remain on the SSH key; `gh auth setup-git` is not
+  called, and the existing removal of `credential.helper` stays.
+- The token's scope is operator configuration, not an image invariant (ADR-007). The repository
+  documents a minimal scope, but does not enforce account model, remotes, or review policy.
+- Merge stays a human action. Tool permissions deny `gh pr merge` and `gh pr review`; GitHub branch
+  protection is the actual boundary.
+- A missing or rejected token must not prevent the container from starting. It disables gh operations
+  and logs a warning.
+
+**Consequences:**
+- The agent can create and update PRs directly, without a human writing the title or body.
+- Two credentials live in the same container: an SSH key with git write access and a GitHub token with
+  API access. Compromise of the agent exposes both; scope and lifetime limit the token, branch
+  protection limits the repository.
+- Fine-grained PATs do not expose a `Checks` permission. `gh pr checks` may be unable to read check
+  runs with such a token; classic `repo` or `public_repo` works. The skill must verify this per token
+  and fall back to `gh run` output.
+- Token rotation is manual: replace the file and recreate the container. Expiry is deliberate.

@@ -13,7 +13,10 @@ The agent is an interchangeable container. Anything that satisfies this contract
 | Backend scripts | `docker/universal-agent/backends/` | `/agent/backends/` |
 | Backend configs | `configs/backends/` | `/configs/backends/` |
 | Workspace | sibling `workspace/` | `/workspace` (read/write) |
-| SSH key | `~/hydr4-data/secrets/ssh/` | `/home/agent/.ssh/` (read-only) |
+
+Credential mounts are not part of this contract. The operator supplies whatever the chosen workflow
+needs — an SSH key, a GitHub token, both, or nothing — as read-only mounts or environment. A backend
+must not assume a particular Git provider, account model, remote layout, or permission set.
 
 | Environment variable | Meaning |
 |---|---|

@@ -19,12 +19,14 @@ services:
       - OPENCODE_PASSWORD=${OPENCODE_PASSWORD}
       - OPENCODE_CONFIG=/configs/backends/opencode/config.json
       - GIT_CONFIG_GLOBAL=/home/agent/.config/.gitconfig
+      - GH_TOKEN_FILE=/home/agent/.secrets/github/token
     volumes:
       - ../../workspace:/workspace
       - ~/hydr4-data/agent/config:/home/agent/.config
       - ~/hydr4-data/agent/local-share:/home/agent/.local/share/opencode
       - ../configs:/configs:ro
       - ~/hydr4-data/secrets/ssh:/home/agent/.ssh:ro
+      - ~/hydr4-data/secrets/github:/home/agent/.secrets/github:ro
     networks:
       - agent-net
       - traefik-net

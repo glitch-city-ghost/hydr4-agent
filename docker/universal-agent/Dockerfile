@@ -22,6 +22,25 @@ RUN ARCH="$(dpkg --print-architecture)" \
     && curl -fsSL "https://github.com/tsl0922/ttyd/releases/download/1.7.7/ttyd.${TTYD_ARCH}" -o /usr/local/bin/ttyd \
     && chmod +x /usr/local/bin/ttyd
 
+# Install the GitHub CLI (gh).
+# gh is a GitHub API client, not a replacement for git: pushes still go over SSH.
+# The image contains no credentials. A token is mounted at runtime and exported by
+# entrypoint.sh, or gh runs unauthenticated.
+ARG GH_VERSION=2.105.0
+RUN ARCH="$(dpkg --print-architecture)" \
+    && case "$ARCH" in \
+         amd64|arm64) ;; \
+         *) echo "Unsupported arch"; exit 1 ;; \
+       esac \
+    && TARBALL="gh_${GH_VERSION}_linux_${ARCH}.tar.gz" \
+    && curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/${TARBALL}" -o "/tmp/${TARBALL}" \
+    && curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_checksums.txt" -o /tmp/gh-checksums.txt \
+    && (cd /tmp && grep " ${TARBALL}$" gh-checksums.txt | sha256sum -c -) \
+    && tar -xzf "/tmp/${TARBALL}" -C /tmp \
+    && install -m 0755 "/tmp/gh_${GH_VERSION}_linux_${ARCH}/bin/gh" /usr/local/bin/gh \
+    && gh --version \
+    && rm -rf "/tmp/gh_${GH_VERSION}_linux_${ARCH}" "/tmp/${TARBALL}" /tmp/gh-checksums.txt
+
 # GitHub SSH host keys are supplied read-only at runtime via /home/agent/.ssh/known_hosts.
 # Do not ssh-keyscan at build time: that is TOFU and not reproducible.
 
