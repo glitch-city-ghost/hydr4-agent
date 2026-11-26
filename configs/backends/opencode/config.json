@@ -76,9 +76,9 @@
       "steps": 50
     },
     "engineer-nemotron": {
-      "description": "Deep-reasoning backup coding agent on Nemotron. Use when DeepSeek tokens are exhausted or the task needs more analysis.",
+      "description": "Deep-reasoning backup coding agent on the direct NVIDIA NIM endpoint. Use when DeepSeek tokens are exhausted or the task needs more analysis.",
       "mode": "primary",
-      "model": "hydr4/nemotron-3-ultra-550b",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 1.0,
       "top_p": 0.95,
       "system": "{file:./prompts/engineer-nemotron.md}",
@@ -197,6 +197,50 @@
           },
           "limit": {
             "context": 1048576,
+            "output": 32768
+          }
+        }
+      }
+    },
+    "nvidia-nim": {
+      "name": "NVIDIA NIM (direct)",
+      "env": ["NVIDIA_API_KEY"],
+      "package": "@opencode/ai/providers/openai-compatible",
+      "settings": {
+        "baseURL": "https://integrate.api.nvidia.com/v1",
+        "timeout": 2400000,
+        "headerTimeout": 2400000,
+        "chunkTimeout": 2400000
+      },
+      "models": {
+        "nemotron-3-ultra-550b": {
+          "modelID": "nvidia/nemotron-3-ultra-550b-a55b",
+          "name": "NVIDIA Nemotron 3 Ultra 550B (direct)",
+          "compatibility": {
+            "reasoningField": "reasoning_content"
+          },
+          "capabilities": {
+            "tools": true,
+            "input": ["text"],
+            "output": ["text"],
+            "temperature": true,
+            "reasoning": {
+              "supported": true
+            }
+          },
+          "body": {
+            "temperature": 1.0,
+            "top_p": 0.95,
+            "max_tokens": 32768,
+            "reasoning_effort": "high",
+            "reasoning_budget": -1,
+            "chat_template_kwargs": {
+              "enable_thinking": true,
+              "force_nonempty_content": true
+            }
+          },
+          "limit": {
+            "context": 1000000,
             "output": 32768
           }
         }

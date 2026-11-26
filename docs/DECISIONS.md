@@ -288,21 +288,56 @@ The model returns 1181 reasoning tokens with no fields, 693 with the full Gemini
 916, and 1072. The gateway drops the fields; from the agent side they are not a usable control.
 
 OpenCode V2 can express these knobs through `providers.*.models.*.capabilities.reasoning` and named
-variants, but a variant would only put the same ignored fields on the wire. Wiring one now would be a
-UI placebo. Revisit it if FreeLLMAPI starts forwarding the fields or if the agent bypasses the gateway.
+variants. We wire them into a separate `nvidia-nim` provider instead of the `hydr4` gateway provider,
+because the gateway drops the fields. The gateway path keeps the prompt-only settings.
 
 **Decision:**
 `engineer` stays on DeepSeek and remains `default_agent`. Add a second primary agent,
-`engineer-nemotron`, with an explicit `hydr4/nemotron-3-ultra-550b` model and a copy of the engineer
-prompt plus a silent deep-reasoning section. Do not put thinking fields in the provider config. The
-prompt is the only lever that survives this gateway. Switching is manual via the agent picker;
-changing only the model keeps the old prompt.
+`engineer-nemotron`, on a direct provider:
+
+```jsonc
+"providers": {
+  "nvidia-nim": {
+    "env": ["NVIDIA_API_KEY"],
+    "package": "@opencode/ai/providers/openai-compatible",
+    "settings": { "baseURL": "https://integrate.api.nvidia.com/v1" },
+    "models": {
+      "nemotron-3-ultra-550b": {
+        "modelID": "nvidia/nemotron-3-ultra-550b-a55b",
+        "capabilities": { "reasoning": { "supported": true } },
+        "body": {
+          "temperature": 1.0,
+          "top_p": 0.95,
+          "max_tokens": 32768,
+          "reasoning_effort": "high",
+          "reasoning_budget": -1,
+          "chat_template_kwargs": {
+            "enable_thinking": true,
+            "force_nonempty_content": true
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+`reasoning_budget: -1` disables the hard ceiling. `max_tokens: 32768` is the cloud maximum and still
+caps total output, so the model must leave room for the answer. `force_nonempty_content` is required
+for tool calls with reasoning on. Do not send `low_effort` to Ultra; use `reasoning_effort` for the
+level. There are no variants: the body is the fixed default for this model.
 
 **Consequences:**
 - Two prompts to maintain. The copy is deliberate until Nemotron proves better; a shared template is
   a later refactor.
 - No automatic quota fallback from DeepSeek to Nemotron.
-- Reasoning is encouraged by instructions, not guaranteed by an API budget. The gateway may still
-  apply its own token policy.
+- `NVIDIA_API_KEY` is visible to the agent process and its shell. It is a separate, narrowly scoped key,
+  not the gateway's upstream key; rotate it and cap it at the provider if the console allows that.
+- The root `.env` is also loaded by the gateway container via `env_file`, so the variable is present
+  there too. The gateway has no code path that reads it.
+- The direct agent bypasses FreeLLMAPI's routing and failover. If NVIDIA is down, the backup agent is
+  down; the primary `engineer` is unaffected.
+- `reasoning_effort: high` is the full mode, but it is not a target: the model may close the trace
+  earlier. `-1` removes the cap, it does not force the maximum. The prompt has to demand depth.
 - The backup agent uses `temperature: 1.0` and `top_p: 0.95`. That follows the model card and adds
   exploration variance, but it is not a correctness guarantee; lower it if code quality degrades.
