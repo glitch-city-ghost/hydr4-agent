@@ -110,7 +110,7 @@ We are paranoid, and we are proud of it.
 *   **No Host Access:** The agent cannot read your personal `.ssh` keys or your Windows drives. It only sees `./workspace`, its own agent config, and the read-only mounts declared in `compose/agents.yaml`.
 *   **Localhost Only:** All ports are bound to `127.0.0.1`. No one on your local network can touch your agent.
 *   **GitHub Access:** No GitHub credentials are baked into the image or tracked in this repository. Whatever the operator mounts under `~/hydr4-data/secrets/` is what the agent gets — an SSH key, a scoped token, or nothing. The account, its permissions, and the review/merge workflow are operator configuration, not a property of the image. Give the agent only the access that the workflow you want it to run actually requires.
-*   **Key Isolation:** Model provider keys (NVIDIA, Google) stay in the gateway; agents only get `HYDRA_API_KEY` for LLM traffic. A search key is separate: when Exa is enabled, `EXA_API_KEY` is passed to the agent container and its shell can read it. It cannot reach the model providers.
+*   **Key Isolation:** The gateway keeps the model-provider keys used for normal traffic; agents only get `HYDRA_API_KEY` for that path. The direct Nemotron backup is the exception: `NVIDIA_API_KEY` is passed to the agent container so it can reach NVIDIA NIM without FreeLLMAPI. `EXA_API_KEY` is there too for web search. Both are credentials the agent process can read; rotate them, and do not reuse the gateway's upstream key.
 *   **Resource Limits:** The agent is capped at `4G` RAM and `2.0` CPU. It won't crash your WSL2 host if it tries to run a fork bomb.
 
 ---

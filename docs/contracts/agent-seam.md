@@ -24,6 +24,7 @@ must not assume a particular Git provider, account model, remote layout, or perm
 | `OPENAI_BASE_URL` | The model gateway, OpenAI-compatible: `http://gateway:3001/v1` |
 | `HYDRA_API_KEY` | Bearer token for that gateway. |
 | `EXA_API_KEY` | Optional web search key for Exa. When set, the `websearch` tool uses Exa instead of another search integration. |
+| `NVIDIA_API_KEY` | Optional direct NVIDIA NIM key for the `engineer-nemotron` agent. Bypasses FreeLLMAPI. |
 | `HTTP_PROXY`, `HTTPS_PROXY` | Optional egress proxy for HTTP(S) tools outside the Docker network. |
 | `NO_PROXY` | Comma-separated bypass list: `gateway`, `hydr4-gateway`, `hydr4-agent`, loopback, and GitHub hosts (see `docs/ARCHITECTURE.md`). |
 

@@ -19,6 +19,7 @@ services:
       - OPENCODE_PASSWORD=${OPENCODE_PASSWORD}
       - OPENCODE_CONFIG=/configs/backends/opencode/config.json
       - EXA_API_KEY=${EXA_API_KEY:-}
+      - NVIDIA_API_KEY=${NVIDIA_API_KEY:-}
       - HTTP_PROXY=${UPSTREAM_PROXY:-}
       - HTTPS_PROXY=${UPSTREAM_PROXY:-}
       - http_proxy=${UPSTREAM_PROXY:-}
