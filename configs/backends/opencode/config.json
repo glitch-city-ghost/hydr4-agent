@@ -129,61 +129,61 @@
       "system": "{file:./pipeline/pipeline.md}",
       "steps": 80
     },
-    "scout": {
+    "pipeline-scout": {
       "description": "Scout / Search. Explores codebase, finds relevant files, gathers facts, maps dependencies.",
       "mode": "subagent",
       "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 0.5,
       "top_p": 0.9,
-      "system": "{file:./pipeline/scout.md}",
+      "system": "{file:./pipeline/pipeline-scout.md}",
       "steps": 30,
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
     },
-    "tech-lead-pm": {
+    "pipeline-tech-lead-pm": {
       "description": "Tech Lead / PM. Defines requirements, breaks down work, plans iterations, accepts deliverables.",
       "mode": "subagent",
       "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 1.0,
       "top_p": 0.95,
-      "system": "{file:./pipeline/tech-lead-pm.md}",
+      "system": "{file:./pipeline/pipeline-tech-lead-pm.md}",
       "steps": 60,
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
     },
-    "architect": {
+    "pipeline-architect": {
       "description": "Software Architect. Designs system structure, APIs, data models, and technical approach.",
       "mode": "subagent",
       "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 1.0,
       "top_p": 0.95,
-      "system": "{file:./pipeline/architect.md}",
+      "system": "{file:./pipeline/pipeline-architect.md}",
       "steps": 60,
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
     },
-    "architecture-judge": {
+    "pipeline-architecture-judge": {
       "description": "Architecture Judge. Reviews architectural decisions for correctness, tradeoffs, and long-term viability.",
       "mode": "subagent",
       "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 0.3,
       "top_p": 0.9,
-      "system": "{file:./pipeline/architecture-judge.md}",
+      "system": "{file:./pipeline/pipeline-architecture-judge.md}",
       "steps": 40,
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
     },
-    "coder": {
+    "pipeline-coder": {
       "description": "Coder. Implements the design. Writes clean, correct code matching conventions.",
       "mode": "subagent",
       "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 0.3,
       "top_p": 0.9,
-      "system": "{file:./pipeline/coder.md}",
+      "system": "{file:./pipeline/pipeline-coder.md}",
       "steps": 80
     },
     "pipeline-reviewer": {
@@ -198,13 +198,13 @@
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
     },
-    "tech-lead-release-gate": {
+    "pipeline-tech-lead-release-gate": {
       "description": "Tech Lead Release Gate. Final acceptance check. Verifies deliverables meet all requirements and quality bars.",
       "mode": "subagent",
       "model": "nvidia-nim/nemotron-3-ultra-550b",
       "temperature": 0.2,
       "top_p": 0.85,
-      "system": "{file:./pipeline/tech-lead-release-gate.md}",
+      "system": "{file:./pipeline/pipeline-tech-lead-release-gate.md}",
       "steps": 30,
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
