@@ -84,6 +84,15 @@
       "system": "{file:./prompts/engineer-nemotron.md}",
       "steps": 80
     },
+    "pipeline": {
+      "description": "Multi-stage Nemotron pipeline agent. Uses direct NVIDIA NIM with max reasoning.",
+      "mode": "primary",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "system": "{file:./pipeline/pipeline.md}",
+      "steps": 80
+    },
     "explore": {
       "model": "hydr4/nemotron-3-ultra-550b",
       "steps": 12
