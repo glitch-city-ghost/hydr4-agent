@@ -120,6 +120,18 @@
     "compaction": {
       "model": "hydr4/nemotron-3-ultra-550b"
     },
+    "tech-lead-pm": {
+      "description": "Tech Lead / PM. Defines requirements, breaks down work, plans iterations, accepts deliverables.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "system": "{file:./pipeline/tech-lead-pm.md}",
+      "steps": 60,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
+    },
     "pipeline": {
       "description": "Multi-stage Nemotron pipeline agent. Uses direct NVIDIA NIM with max reasoning.",
       "mode": "primary",
