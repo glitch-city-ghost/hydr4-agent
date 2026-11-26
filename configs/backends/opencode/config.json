@@ -164,6 +164,39 @@
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
+    },
+    "coder": {
+      "description": "Coder. Implements the design. Writes clean, correct code matching conventions.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 0.3,
+      "top_p": 0.9,
+      "system": "{file:./pipeline/coder.md}",
+      "steps": 80
+    },
+    "pipeline-reviewer": {
+      "description": "Pipeline Reviewer. Reviews code for correctness, security, performance, and adherence to design.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 0.1,
+      "top_p": 0.8,
+      "system": "{file:./pipeline/pipeline-reviewer.md}",
+      "steps": 40,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
+    },
+    "tech-lead-release-gate": {
+      "description": "Tech Lead Release Gate. Final acceptance check. Verifies deliverables meet all requirements and quality bars.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 0.2,
+      "top_p": 0.85,
+      "system": "{file:./pipeline/tech-lead-release-gate.md}",
+      "steps": 30,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
     }
   },
   "commands": {
