@@ -23,6 +23,7 @@ must not assume a particular Git provider, account model, remote layout, or perm
 | `AGENT_BACKEND` | Which backend to run: `<name>` selects `/agent/backends/<name>.sh`. |
 | `OPENAI_BASE_URL` | The model gateway, OpenAI-compatible: `http://gateway:3001/v1` |
 | `HYDRA_API_KEY` | Bearer token for that gateway. |
+| `EXA_API_KEY` | Optional web search key for Exa. When set, the `websearch` tool uses Exa instead of another search integration. |
 
 ## 2. Outputs
 

@@ -210,3 +210,36 @@ mounted at `/home/agent/.secrets/github/token` and exported as `GH_TOKEN` by `en
   runs with such a token; classic `repo` or `public_repo` works. The skill must verify this per token
   and fall back to `gh run` output.
 - Token rotation is manual: replace the file and recreate the container. Expiry is deliberate.
+
+---
+
+## ADR-009 — Exa as the web search provider
+
+**Status:** Accepted.
+
+**Context:**
+OpenCode V2 ships a `websearch` tool but no built-in search engine. It can route that tool to a
+provider with a key. The agent needs current pages for code, docs, and release checks; the model
+provider's own knowledge is not enough.
+
+**Decision:**
+Use Exa as the provider in `configs/backends/opencode/config.json`:
+
+```json
+"websearch": { "provider": "exa" }
+```
+
+Pass `EXA_API_KEY` from the host `.env` to the agent container in `compose/agents.yaml`, and allow the
+`websearch` permission action. A missing key is reported by the tool; it does not affect the model
+path or container startup.
+
+**Consequences:**
+- Exa is a separate dependency and a separate billable account, but the Starter plan needs no card.
+- The key is visible to the agent process and its shell. It is a search credential, not a model
+  provider credential, so it does not widen access to NVIDIA, Google, or the gateway.
+- The root `.env` is also loaded by the gateway container via `env_file`, so `EXA_API_KEY` is present
+  in that process environment too. The gateway has no code path that reads it; splitting the secret
+  files is a future cleanup.
+- Rotating the key is a `.env` edit plus `./hydra restart`; no image rebuild.
+- The keyless Exa MCP server remains an alternative, but it adds a second tool surface and does not
+  replace `websearch`. This repository prefers the native provider.

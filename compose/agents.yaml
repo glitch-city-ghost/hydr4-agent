@@ -18,6 +18,7 @@ services:
       - HYDRA_API_KEY=${FREELMAPI_UNIFIED_KEY}
       - OPENCODE_PASSWORD=${OPENCODE_PASSWORD}
       - OPENCODE_CONFIG=/configs/backends/opencode/config.json
+      - EXA_API_KEY=${EXA_API_KEY:-}
       - GIT_CONFIG_GLOBAL=/home/agent/.config/.gitconfig
       - GH_TOKEN_FILE=/home/agent/.secrets/github/token
     volumes:
