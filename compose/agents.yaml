@@ -19,6 +19,12 @@ services:
       - OPENCODE_PASSWORD=${OPENCODE_PASSWORD}
       - OPENCODE_CONFIG=/configs/backends/opencode/config.json
       - EXA_API_KEY=${EXA_API_KEY:-}
+      - HTTP_PROXY=${UPSTREAM_PROXY:-}
+      - HTTPS_PROXY=${UPSTREAM_PROXY:-}
+      - http_proxy=${UPSTREAM_PROXY:-}
+      - https_proxy=${UPSTREAM_PROXY:-}
+      - NO_PROXY=gateway,gateway:3001,hydr4-gateway,hydr4-agent,localhost,.localhost,127.0.0.1,::1,api.github.com,github.com,raw.githubusercontent.com,objects.githubusercontent.com,codeload.github.com
+      - no_proxy=gateway,gateway:3001,hydr4-gateway,hydr4-agent,localhost,.localhost,127.0.0.1,::1,api.github.com,github.com,raw.githubusercontent.com,objects.githubusercontent.com,codeload.github.com
       - GIT_CONFIG_GLOBAL=/home/agent/.config/.gitconfig
       - GH_TOKEN_FILE=/home/agent/.secrets/github/token
     volumes:
