@@ -80,6 +80,7 @@ All secrets are files supplied by the host. None of them is tracked in Git.
 | `ENCRYPTION_KEY` | root `.env`; FreeLLMAPI database key |
 | `OPENCODE_PASSWORD` | root `.env`; OpenCode Web UI |
 | Provider keys | gateway dashboard or `.env`; stored under `~/hydr4-data/gateway/` |
+| `EXA_API_KEY` (optional) | root `.env`; exposed to the agent for the `websearch` tool. The gateway does not receive it. |
 | Git SSH key (optional) | `~/hydr4-data/secrets/ssh/`: `0700` on the directory, `0600` on the key, `0644` on `known_hosts` |
 | GitHub API token (optional) | `~/hydr4-data/secrets/github/token`: `0600` on the file and `0700` on its directory; contents are a fine-grained or classic PAT owned by the bot account. Read-only at `/home/agent/.secrets/github/token` and exported by entrypoint as `GH_TOKEN`. Without it, `gh` runs unauthenticated; git still works. |
 
