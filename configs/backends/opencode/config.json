@@ -140,6 +140,18 @@
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
+    },
+    "architect": {
+      "description": "Software Architect. Designs system structure, APIs, data models, and technical approach.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 1.0,
+      "top_p": 0.95,
+      "system": "{file:./pipeline/architect.md}",
+      "steps": 60,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
     }
   },
   "commands": {
