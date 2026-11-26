@@ -279,8 +279,13 @@ probe at temperature 0, the same request with `chat_template_kwargs`, `enable_th
 text, and token usage as the baseline, and `enable_thinking: false` still returned the reasoning. On a
 hard probe at temperature 1.0 with `max_tokens: 8192`, the full Gemini payload returned 1741 reasoning
 tokens against 1718 for the baseline; that is sampling noise, not a budget increase, and 1741 is far
-below the cap. Either the gateway drops these fields or the upstream ignores them; from the agent side
-they are not a usable control.
+below the cap.
+
+A direct probe against `integrate.api.nvidia.com` with the same model at temperature 0 is decisive.
+The model returns 1181 reasoning tokens with no fields, 693 with the full Gemini payload, and 0 with
+`enable_thinking: false` / `low_effort: true` / `reasoning_effort: low`. The fields work directly, and
+"high" is below the default, not the maximum. Through FreeLLMAPI the same three payloads return 1003,
+916, and 1072. The gateway drops the fields; from the agent side they are not a usable control.
 
 OpenCode V2 can express these knobs through `providers.*.models.*.capabilities.reasoning` and named
 variants, but a variant would only put the same ignored fields on the wire. Wiring one now would be a
