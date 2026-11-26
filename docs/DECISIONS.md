@@ -261,3 +261,34 @@ fallback.
 - Rotating the key is a `.env` edit plus `./hydra restart`; no image rebuild.
 - The keyless Exa MCP server remains an alternative, but it adds a second tool surface and does not
   replace `websearch`. This repository prefers the native provider.
+
+---
+
+## ADR-010 — Model-specific prompts are agent-level
+
+**Status:** Accepted.
+
+**Context:**
+The stack can use DeepSeek V4.1 Flash or Nemotron 3 Ultra 550B. OpenCode V2 has no prompt field on a
+model definition. An agent carries both `model` and `system`, so the prompt follows the agent, not the
+model. Changing the model inside a session keeps the current agent's prompt.
+
+FreeLLMAPI accepts unknown thinking fields with HTTP 200 but does not apply them. The same request
+with `chat_template_kwargs`, `enable_thinking`, `medium_effort`, `thinking_token_budget`, and
+`reasoning_budget` returned the same content, reasoning text, and token usage as the baseline, and
+`enable_thinking: false` still returned the reasoning. Either the gateway drops them or the upstream
+ignores them; from the agent side they are not a usable control.
+
+**Decision:**
+`engineer` stays on DeepSeek and remains `default_agent`. Add a second primary agent,
+`engineer-nemotron`, with an explicit `hydr4/nemotron-3-ultra-550b` model and a copy of the engineer
+prompt plus a silent deep-reasoning section. Do not put thinking fields in the provider config. The
+prompt is the only lever that survives this gateway. Switching is manual via the agent picker;
+changing only the model keeps the old prompt.
+
+**Consequences:**
+- Two prompts to maintain. The copy is deliberate until Nemotron proves better; a shared template is
+  a later refactor.
+- No automatic quota fallback from DeepSeek to Nemotron.
+- Reasoning is encouraged by instructions, not guaranteed by an API budget. The gateway may still
+  apply its own token policy.
