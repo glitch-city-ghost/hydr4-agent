@@ -273,11 +273,18 @@ The stack can use DeepSeek V4.1 Flash or Nemotron 3 Ultra 550B. OpenCode V2 has 
 model definition. An agent carries both `model` and `system`, so the prompt follows the agent, not the
 model. Changing the model inside a session keeps the current agent's prompt.
 
-FreeLLMAPI accepts unknown thinking fields with HTTP 200 but does not apply them. The same request
-with `chat_template_kwargs`, `enable_thinking`, `medium_effort`, `thinking_token_budget`, and
-`reasoning_budget` returned the same content, reasoning text, and token usage as the baseline, and
-`enable_thinking: false` still returned the reasoning. Either the gateway drops them or the upstream
-ignores them; from the agent side they are not a usable control.
+FreeLLMAPI accepts unknown thinking fields with HTTP 200 but does not apply them. On a fixed simple
+probe at temperature 0, the same request with `chat_template_kwargs`, `enable_thinking`,
+`medium_effort`, `thinking_token_budget`, and `reasoning_budget` returned the same content, reasoning
+text, and token usage as the baseline, and `enable_thinking: false` still returned the reasoning. On a
+hard probe at temperature 1.0 with `max_tokens: 8192`, the full Gemini payload returned 1741 reasoning
+tokens against 1718 for the baseline; that is sampling noise, not a budget increase, and 1741 is far
+below the cap. Either the gateway drops these fields or the upstream ignores them; from the agent side
+they are not a usable control.
+
+OpenCode V2 can express these knobs through `providers.*.models.*.capabilities.reasoning` and named
+variants, but a variant would only put the same ignored fields on the wire. Wiring one now would be a
+UI placebo. Revisit it if FreeLLMAPI starts forwarding the fields or if the agent bypasses the gateway.
 
 **Decision:**
 `engineer` stays on DeepSeek and remains `default_agent`. Add a second primary agent,
@@ -292,3 +299,5 @@ changing only the model keeps the old prompt.
 - No automatic quota fallback from DeepSeek to Nemotron.
 - Reasoning is encouraged by instructions, not guaranteed by an API budget. The gateway may still
   apply its own token policy.
+- The backup agent uses `temperature: 1.0` and `top_p: 0.95`. That follows the model card and adds
+  exploration variance, but it is not a correctness guarantee; lower it if code quality degrades.

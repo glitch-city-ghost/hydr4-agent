@@ -79,8 +79,10 @@
       "description": "Deep-reasoning backup coding agent on Nemotron. Use when DeepSeek tokens are exhausted or the task needs more analysis.",
       "mode": "primary",
       "model": "hydr4/nemotron-3-ultra-550b",
+      "temperature": 1.0,
+      "top_p": 0.95,
       "system": "{file:./prompts/engineer-nemotron.md}",
-      "steps": 60
+      "steps": 80
     },
     "explore": {
       "model": "hydr4/nemotron-3-ultra-550b",
