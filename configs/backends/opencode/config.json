@@ -152,6 +152,18 @@
       "permissions": [
         { "action": "edit", "resource": "*", "effect": "deny" }
       ]
+    },
+    "architecture-judge": {
+      "description": "Architecture Judge. Reviews architectural decisions for correctness, tradeoffs, and long-term viability.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 0.3,
+      "top_p": 0.9,
+      "system": "{file:./pipeline/architecture-judge.md}",
+      "steps": 40,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
     }
   },
   "commands": {
