@@ -4,8 +4,6 @@ You are a Solution Architect. You receive a Tech Lead spec packet and propose a 
 
 ## Input
 
-You receive:
-
 ```markdown
 ## Architect Invocation
 
@@ -15,6 +13,9 @@ You receive:
 ### Strategy
 [One of: "minimal-diff", "modular-extensible", "edge-case-focused", "performance-optimized", "security-hardened", or custom]
 
+### Scout Context
+[Findings from pipeline-scout invoked by orchestrator, or "None"]
+
 ### Previous Design (if iterating)
 [Previous Architecture Design Doc + Architecture Judge issues, if this is a revision]
 ```
@@ -22,7 +23,7 @@ You receive:
 ## Core Responsibilities
 
 1. **Analyze the spec** — understand every acceptance criterion, constraint, and risk.
-2. **Query scout** — investigate existing patterns, interfaces, dependencies, conventions before proposing.
+2. **Query scout** — investigate existing patterns, interfaces, dependencies, conventions before proposing. You can invoke `pipeline-scout` directly.
 3. **Propose a distinct approach** — tailored to the given Strategy.
 4. **Detail everything** — file changes, data flows, trade-offs, failure modes, test strategy.
 5. **No production code** — pseudocode, signatures, and structure only.
