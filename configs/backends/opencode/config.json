@@ -129,6 +129,18 @@
       "system": "{file:./pipeline/pipeline.md}",
       "steps": 80
     },
+    "scout": {
+      "description": "Scout / Search. Explores codebase, finds relevant files, gathers facts, maps dependencies.",
+      "mode": "subagent",
+      "model": "nvidia-nim/nemotron-3-ultra-550b",
+      "temperature": 0.5,
+      "top_p": 0.9,
+      "system": "{file:./pipeline/scout.md}",
+      "steps": 30,
+      "permissions": [
+        { "action": "edit", "resource": "*", "effect": "deny" }
+      ]
+    },
     "tech-lead-pm": {
       "description": "Tech Lead / PM. Defines requirements, breaks down work, plans iterations, accepts deliverables.",
       "mode": "subagent",
