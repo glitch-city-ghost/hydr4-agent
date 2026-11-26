@@ -45,7 +45,7 @@ This is what the host currently runs (`l3rn4-nix/modules/docker.nix`). It also m
 
 ## ADR-003 — Agent Network Access & Egress Proxy Address
 
-**Status:** Accepted.
+**Status:** Accepted. Amended 2026-11 (agent egress).
 
 **Context:**
 The code reviewer flagged two things: `agent-net` is not `internal: true`, and the egress proxy address is environment-specific.
@@ -60,18 +60,24 @@ With `iptables = false`, Docker does not filter or rewrite traffic between bridg
 **Decision:**
 
 1. We keep standard bridge networking, so agents can run `git clone`, `npm install`, and web search.
-2. The egress proxy address is **not hardcoded in this repository**. It is a host-specific value set in the root `.env` and passed to the gateway only:
+2. The egress proxy address is **not hardcoded in this repository**. It is a host-specific value set in the root `.env` and passed to the gateway and the agent:
    ```ini
    UPSTREAM_PROXY=http://172.17.0.1:7890
    ```
 3. `172.17.0.1` is the `docker0` bridge address on this host. It is an example, not a requirement. Any host address that mihomo listens on works, because mihomo uses `bind-address: "*"` with `allow-lan: true`.
-4. The agent never receives the proxy. It uses the host's mirrored network directly.
+4. The agent receives the same proxy as `HTTP_PROXY` / `HTTPS_PROXY`, plus a `NO_PROXY` list for `gateway`, `gateway:3001`, `hydr4-gateway`, `hydr4-agent`, `localhost`, `.localhost`, `127.0.0.1`, `::1`, and the GitHub HTTPS hosts. Git over SSH does not use an HTTP proxy, so it is unaffected.
 
 **Consequences:**
-- Agents have full egress to the internet (bypassing mihomo for raw traffic).
-- The setup is WSL2-specific. To mitigate key leakage, agents only receive `HYDRA_API_KEY` (gateway key), not the raw provider keys.
+- Agent HTTP(S) egress goes through mihomo; Docker DNS and SSH Git stay direct. To mitigate key leakage, agents only receive `HYDRA_API_KEY` (gateway key) for model traffic, not the raw model provider keys. Search keys are separate.
 - Moving to a different host, or changing `docker0`'s subnet, requires editing `UPSTREAM_PROXY` in `.env` — nothing else changes.
 - If mihomo ever stops binding `*`, `UPSTREAM_PROXY` must point at the interface mihomo actually binds.
+
+**Correction (2026-11):** The original decision kept the agent off the proxy. Cloudflare in front of
+Exa rejects the container's direct egress with a 403 HTML page, even without an API key; the same
+request through mihomo returns 200. The agent now receives the proxy and the `NO_PROXY` list above. Model traffic to `gateway` and
+git over SSH are unaffected. If mihomo is down, the agent's HTTP(S) tools (web search, `gh`, npm/pip,
+HTTPS git) fail, but the model path to `gateway` still works. mihomo sees the agent's HTTP(S)
+destinations; the host is the trust boundary.
 
 ---
 
@@ -232,6 +238,18 @@ Use Exa as the provider in `configs/backends/opencode/config.json`:
 Pass `EXA_API_KEY` from the host `.env` to the agent container in `compose/agents.yaml`, and allow the
 `websearch` permission action. A missing key is reported by the tool; it does not affect the model
 path or container startup.
+
+**Egress:** Cloudflare in front of Exa rejects the container's direct HTTP(S) egress with a 403 HTML
+page, even when the request has no API key. The same request through `UPSTREAM_PROXY` returns 200.
+The agent therefore receives `HTTP_PROXY` / `HTTPS_PROXY` and keeps `gateway`, loopback, and GitHub in
+`NO_PROXY` (ADR-003 correction). Without the proxy, Exa is not usable.
+
+**Provider count:** OpenCode V2 accepts one provider ID, or `random`. `random` selects a provider per
+session and re-rolls only on HTTP 429; it is not an ordered TinyFish-primary/Exa-fallback. TinyFish is
+not configured: `agent.tinyfish.ai/mcp` returns 401 without `TINYFISH_API_KEY` or OAuth, and neither is
+present. Exa remains active. If TinyFish credentials are added, the options are `random` with both,
+TinyFish as the native provider plus Exa over MCP as an explicit alternative, or a plugin for ordered
+fallback.
 
 **Consequences:**
 - Exa is a separate dependency and a separate billable account, but the Starter plan needs no card.

@@ -35,14 +35,18 @@ answers `502` while the containers themselves stay healthy.
 `mihomo` runs on the host as a systemd service (`l3rn4-nix/modules/mihomo.nix`), not as a container. It
 binds `*` on `mixed-port: 7890`, which is what makes it reachable from Docker.
 
-The gateway reaches it through `HTTP_PROXY` / `HTTPS_PROXY`, both set from a single `.env` value:
+The gateway and the agent reach it through `HTTP_PROXY` / `HTTPS_PROXY`, both set from a single
+`.env` value:
 
 ```ini
 UPSTREAM_PROXY=http://172.17.0.1:7890
 ```
 
-The address is host-specific. `127.0.0.1` inside the gateway container is the container, not the host,
-and does not reach mihomo. The agent does not get the proxy.
+The address is host-specific. `127.0.0.1` inside the agent or gateway container is the container,
+not the host, and does not reach mihomo. Both services get the proxy. The agent also gets
+`NO_PROXY=gateway,gateway:3001,hydr4-gateway,hydr4-agent,localhost,.localhost,127.0.0.1,::1,`
+`api.github.com,github.com,raw.githubusercontent.com,objects.githubusercontent.com,codeload.github.com`,
+so model traffic, loopback, and GitHub stay direct. Git over SSH does not use the proxy.
 
 ## 3. Data on disk
 
@@ -80,7 +84,7 @@ All secrets are files supplied by the host. None of them is tracked in Git.
 | `ENCRYPTION_KEY` | root `.env`; FreeLLMAPI database key |
 | `OPENCODE_PASSWORD` | root `.env`; OpenCode Web UI |
 | Provider keys | gateway dashboard or `.env`; stored under `~/hydr4-data/gateway/` |
-| `EXA_API_KEY` (optional) | root `.env`; exposed to the agent for the `websearch` tool. The gateway does not receive it. |
+| `EXA_API_KEY` (optional) | root `.env`; exposed to the agent for the `websearch` tool. The gateway process also loads root `.env`, so the variable is in its environment; it does not read it. |
 | Git SSH key (optional) | `~/hydr4-data/secrets/ssh/`: `0700` on the directory, `0600` on the key, `0644` on `known_hosts` |
 | GitHub API token (optional) | `~/hydr4-data/secrets/github/token`: `0600` on the file and `0700` on its directory; contents are a fine-grained or classic PAT owned by the bot account. Read-only at `/home/agent/.secrets/github/token` and exported by entrypoint as `GH_TOKEN`. Without it, `gh` runs unauthenticated; git still works. |
 

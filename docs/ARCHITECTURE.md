@@ -34,7 +34,7 @@ agent: http://gateway:3001/v1   (OpenAI-compatible /chat/completions, /models)
 ```
 
 - Container names (`hydr4-gateway`, `hydr4-agent`) are not registered in Docker DNS. They are only for `docker ps` and host-side `docker exec`.
-- The agent has **no** upstream proxy. It talks to Docker DNS directly.
+- The agent uses the host proxy for HTTP(S) egress. `gateway` is in `NO_PROXY`, so model traffic still talks to Docker DNS directly. Git over SSH does not use an HTTP proxy.
 
 ### Host -> containers
 
@@ -43,13 +43,19 @@ Two independent paths exist:
 - `http://agent.localhost` / `http://api.localhost` — through Traefik. **This is the supported path.**
 - `127.0.0.1:4096` / `127.0.0.1:3001` — direct port bindings. **Debug fallback only**: for the check scripts, and for reaching a container by hand when Traefik is down or misconfigured. Not part of the contract, bound to loopback so not reachable from the LAN. Marked for removal once container-to-container access through Traefik is the only supported path (see `docs/ROADMAP.md`, last item).
 
-### Gateway -> providers (egress)
+### Gateway -> providers, agent -> web (egress)
 
-- By default: direct NAT from the container.
-- Through mihomo: only if `UPSTREAM_PROXY` is set in the root `.env`. `compose/gateway.yaml` maps it to the gateway's `HTTP_PROXY`/`HTTPS_PROXY`.
+- The gateway sends LLM provider traffic through mihomo when `UPSTREAM_PROXY` is set in the root
+  `.env`. `compose/gateway.yaml` maps it to `HTTP_PROXY` / `HTTPS_PROXY`.
+- The agent sends HTTP(S) tool traffic through the same proxy. `compose/agents.yaml` maps
+  `UPSTREAM_PROXY` to `HTTP_PROXY` / `HTTPS_PROXY` and sets `NO_PROXY` for `gateway`,
+  `hydr4-gateway`, `hydr4-agent`, loopback, and GitHub HTTPS hosts.
 - mihomo lives on the host (`l3rn4-nix`), not in Docker. It stays there and will not move.
-- mihomo config (`l3rn4-nix/mihomo-config.yaml`) binds `*` with `allow-lan: true` on `mixed-port: 7890`.
-- The gateway is the only service that gets the proxy. The agent keeps its direct egress path.
+- mihomo config (`l3rn4-nix/mihomo-config.yaml`) binds `*` with `allow-lan: true` on
+  `mixed-port: 7890`.
+- Git over SSH does not use the HTTP proxy.
+- The gateway model path is direct Docker DNS (`gateway` is in `NO_PROXY`); only external HTTP(S)
+  goes through mihomo.
 
 Example, on a host where `docker0` is `172.17.0.1`:
 
