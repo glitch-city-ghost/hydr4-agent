@@ -47,7 +47,8 @@ RUN ARCH="$(dpkg --print-architecture)" \
 # Install OpenCode, DeepSeek Harness (CLI), and opencode-task-model plugin
 # The postinstall verifies the binary by running `opencode --version` as root,
 # which leaves root-owned scratch files in /tmp. Drop them in the same layer.
-RUN npm install -g @opencode/cli dsh lars-hagen/opencode-task-model \
+RUN npm install -g @opencode/cli dsh opencode-task-model \
+    && opencode plugin --global opencode-task-model@1.3.1 \
     && rm -rf /tmp/opencode /tmp/.bun-* /tmp/node-compile-cache
 
 # Create the user
