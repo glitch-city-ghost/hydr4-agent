@@ -19,7 +19,7 @@ Your ONLY job is to invoke the pipeline stages in order and manage the flow.
 
 **All subagent invocations MUST use `background: false` to ensure synchronous (blocking) execution.**
 
-The OpenCode `task` tool (subagent delegation) accepts a `background` parameter:
+The OpenCode `subagent` tool (subagent delegation) accepts a `background` parameter:
 - `background: false` (REQUIRED) — parent agent blocks and waits for subagent to complete
 - `background: true` (default) — returns control immediately (async, breaks pipeline)
 
@@ -29,7 +29,7 @@ The OpenCode `task` tool (subagent delegation) accepts a `background` parameter:
 
 ```python
 # Stage 1: Tech Lead PM — SYNCHRONOUS
-result = task("pipeline-tech-lead-pm", """
+result = subagent("pipeline-tech-lead-pm", """
 ## Tech Lead PM Invocation
 ### User Request
 {original_request}
@@ -41,27 +41,27 @@ result = task("pipeline-tech-lead-pm", """
 # WAIT for result. Tool blocks until subagent completes.
 
 # Stage 3: Parallel Architects — ALL SYNCHRONOUS
-result_a = task("pipeline-architect", {minimal_diff_context}, background=False)
-result_b = task("pipeline-architect", {modular_extensible_context}, background=False)
-result_c = task("pipeline-architect", {edge_case_focused_context}, background=False)
+result_a = subagent("pipeline-architect", {minimal_diff_context}, background=False)
+result_b = subagent("pipeline-architect", {modular_extensible_context}, background=False)
+result_c = subagent("pipeline-architect", {edge_case_focused_context}, background=False)
 # WAIT for all three.
 ```
 
 ### WRONG (breaks pipeline):
 ```python
 # Missing background: false → async, returns immediately
-result = task("pipeline-tech-lead-pm", "prompt...")
+result = subagent("pipeline-tech-lead-pm", "prompt...")
 ```
 
 **The environment variable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=false` is also set globally, but you must still explicitly pass `background: false` as a safety net.**
 
-When you invoke `task("agent-name", "prompt", background=False)`:
+When you invoke `subagent("agent-name", "prompt", background=False)`:
 1. The tool call **does not return** until that subagent completes its entire work and returns its output.
 2. You **must wait** for the subagent's full response before doing anything else.
 3. You **cannot** launch a subagent and immediately continue to the next step in the same turn.
-4. **Sequential stages = sequential task calls.** Each stage waits for the previous to finish.
+4. **Sequential stages = sequential subagent calls.** Each stage waits for the previous to finish.
 
-**Parallel execution** (only for Stage 3 architects): you invoke multiple `task` calls in the **same message/turn**. They run concurrently and you wait for all to return.
+**Parallel execution** (only for Stage 3 architects): you invoke multiple `subagent` calls in the **same message/turn**. They run concurrently and you wait for all to return.
 
 ## Pipeline Stages (Strictly Sequential Except Stage 3)
 
@@ -117,13 +117,13 @@ DONE
 6. **Enforce quality gates** — no stage proceeds without its gate passing.
 7. **Report progress** — keep user informed of stage, status, blockers.
 
-## Subagent Invocation (using `task` tool from opencode-task-model plugin)
+## Subagent Invocation (using `subagent` tool from opencode-task-model plugin)
 
 ### Sequential Stages (1, 2, 4, 5, 6, 7)
 
 ```python
 # Stage 1: Invoke, WAIT for result, then process
-result = task("pipeline-tech-lead-pm", """
+result = subagent("pipeline-tech-lead-pm", """
 ## Tech Lead PM Invocation
 ### User Request
 {original_request}
@@ -136,7 +136,7 @@ result = task("pipeline-tech-lead-pm", """
 # Then: if result has Questions for User → present to user, get answers, re-invoke.
 
 # Stage 2: Only after Stage 1 completes without questions
-scout_result = task("pipeline-scout", """
+scout_result = subagent("pipeline-scout", """
 ## Scout Query
 **From**: pipeline-orchestrator
 **Question**: {specific_question}
@@ -146,7 +146,7 @@ scout_result = task("pipeline-scout", """
 # WAIT for scout_result.
 
 # Stage 4: Only after Stage 3 completes
-judge_result = task("pipeline-architecture-judge", {full_context}, background=False)
+judge_result = subagent("pipeline-architecture-judge", {full_context}, background=False)
 # WAIT for judge_result.
 # If FAIL → re-invoke relevant architect(s), then re-invoke judge. Loop until PASS.
 
@@ -157,9 +157,9 @@ judge_result = task("pipeline-architecture-judge", {full_context}, background=Fa
 
 ```python
 # Launch ALL THREE in the SAME TURN (same message)
-task("pipeline-architect", {minimal_diff_context}, background=False)
-task("pipeline-architect", {modular_extensible_context}, background=False)
-task("pipeline-architect", {edge_case_focused_context}, background=False)
+subagent("pipeline-architect", {minimal_diff_context}, background=False)
+subagent("pipeline-architect", {modular_extensible_context}, background=False)
+subagent("pipeline-architect", {edge_case_focused_context}, background=False)
 # WAIT for all three to return before proceeding to Stage 4.
 ```
 
