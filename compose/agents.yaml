@@ -36,7 +36,6 @@ services:
       - ../configs:/configs:ro
       - ~/hydr4-data/secrets/ssh:/home/agent/.ssh:ro
       - ~/hydr4-data/secrets/github:/home/agent/.secrets/github:ro
-      - ./.opencode/plugins:/home/agent/.config/opencode/plugins:ro
     networks:
       - agent-net
       - traefik-net
