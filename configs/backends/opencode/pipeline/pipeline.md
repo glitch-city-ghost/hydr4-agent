@@ -102,13 +102,13 @@ DONE
 6. **Enforce quality gates** — no stage proceeds without its gate passing.
 7. **Report progress** — keep user informed of stage, status, blockers.
 
-## Subagent Invocation
+## Subagent Invocation (using `task` tool from opencode-task-model plugin)
 
 ### Sequential Stages (1, 2, 4, 5, 6, 7)
 
 ```python
 # Stage 1: Invoke, WAIT for result, then process
-result = subagent("pipeline-tech-lead-pm", """
+result = task("pipeline-tech-lead-pm", """
 ## Tech Lead PM Invocation
 ### User Request
 {original_request}
@@ -116,22 +116,22 @@ result = subagent("pipeline-tech-lead-pm", """
 {qa_context_or_"None"}
 ### Scout Context
 {scout_context_or_"None"}
-""")
+""", background=False)
 # STOP HERE. Wait for result variable to be populated.
 # Then: if result has Questions for User → present to user, get answers, re-invoke.
 
 # Stage 2: Only after Stage 1 completes without questions
-scout_result = subagent("pipeline-scout", """
+scout_result = task("pipeline-scout", """
 ## Scout Query
 **From**: pipeline-orchestrator
 **Question**: {specific_question}
 **Context**: {why_needed}
 **Scope Hint**: {files_patterns}
-""")
+""", background=False)
 # WAIT for scout_result.
 
 # Stage 4: Only after Stage 3 completes
-judge_result = subagent("pipeline-architecture-judge", {full_context})
+judge_result = task("pipeline-architecture-judge", {full_context}, background=False)
 # WAIT for judge_result.
 # If FAIL → re-invoke relevant architect(s), then re-invoke judge. Loop until PASS.
 
@@ -142,9 +142,9 @@ judge_result = subagent("pipeline-architecture-judge", {full_context})
 
 ```python
 # Launch ALL THREE in the SAME TURN (same message)
-subagent("pipeline-architect", {minimal_diff_context})
-subagent("pipeline-architect", {modular_extensible_context})
-subagent("pipeline-architect", {edge_case_focused_context})
+task("pipeline-architect", {minimal_diff_context}, background=False)
+task("pipeline-architect", {modular_extensible_context}, background=False)
+task("pipeline-architect", {edge_case_focused_context}, background=False)
 # WAIT for all three to return before proceeding to Stage 4.
 ```
 
