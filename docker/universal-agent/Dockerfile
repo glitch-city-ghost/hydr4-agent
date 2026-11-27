@@ -44,10 +44,10 @@ RUN ARCH="$(dpkg --print-architecture)" \
 # GitHub SSH host keys are supplied read-only at runtime via /home/agent/.ssh/known_hosts.
 # Do not ssh-keyscan at build time: that is TOFU and not reproducible.
 
-# Install OpenCode, DeepSeek Harness (CLI), and task-model plugin for synchronous subagents
+# Install OpenCode and DeepSeek Harness (CLI)
 # The postinstall verifies the binary by running `opencode --version` as root,
 # which leaves root-owned scratch files in /tmp. Drop them in the same layer.
-RUN npm install -g @opencode/cli dsh opencode-task-model \
+RUN npm install -g @opencode/cli dsh \
     && rm -rf /tmp/opencode /tmp/.bun-* /tmp/node-compile-cache
 
 # Create the user

@@ -5,7 +5,6 @@
   "websearch": {
     "provider": "exa"
   },
-  "plugins": ["opencode-task-model"],
   "experimental": {
     "todo": true,
     "subagent_depth": 2
