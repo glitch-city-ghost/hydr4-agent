@@ -42,13 +42,13 @@ result = task("pipeline-tech-lead-pm", "prompt...")
 
 **The environment variable `OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS=false` is also set globally, but you must still explicitly pass `background: false` as a safety net.**
 
-When you invoke `subagent("agent-name", "prompt")`:
+When you invoke `task("agent-name", "prompt", background=False)`:
 1. The tool call **does not return** until that subagent completes its entire work and returns its output.
 2. You **must wait** for the subagent's full response before doing anything else.
 3. You **cannot** launch a subagent and immediately continue to the next step in the same turn.
-4. **Sequential stages = sequential subagent calls.** Each stage waits for the previous to finish.
+4. **Sequential stages = sequential task calls.** Each stage waits for the previous to finish.
 
-**Parallel execution** (only for Stage 3 architects): you invoke multiple `subagent` calls in the **same message/turn**. They run concurrently and you wait for all to return.
+**Parallel execution** (only for Stage 3 architects): you invoke multiple `task` calls in the **same message/turn**. They run concurrently and you wait for all to return.
 
 ## Pipeline Stages (Strictly Sequential Except Stage 3)
 
