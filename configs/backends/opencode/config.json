@@ -5,6 +5,7 @@
   "websearch": {
     "provider": "exa"
   },
+  "plugin": ["opencode-dynamic-workflows"],
   "experimental": {
     "todo": true,
     "subagent_depth": 2
